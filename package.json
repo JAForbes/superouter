@@ -1,0 +1,14 @@
+{
+  "name": "router",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^5.8.0"
+  }
+}
