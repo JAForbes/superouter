@@ -12,7 +12,7 @@
     "dist": "npm-run-all --parallel dist:*",
     "dist:fold": "browserify lib/index.js --standalone superouter | uglifyjs -mc > dist/superouter.min.js",
     "release": "git push && npm version minor && npm publish",
-    "preversion": "npm test"
+    "--preversion": "npm test"
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
