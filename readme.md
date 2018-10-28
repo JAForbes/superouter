@@ -23,7 +23,7 @@ Route.Home()
 //=> { type: 'Route', case: 'Home' }
 Route.Post({ post }) 
 //=> { type: 'Route', case: 'Post', value: { post }}
-Route.Settings({ rest: '/a/b/c })
+Route.Settings({ rest: '/a/b/c' })
 // => { type: 'Route', case: 'Settings', value: 'rest' }
 
 const view = 
