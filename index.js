@@ -1,138 +1,312 @@
-const Pattern = {
+const Valid = {
+    Y: value => ({ case: 'Y', type: 'Valid', value}),
+    N: value => ({ case: 'N', type: 'Valid', value}),
+    bifold: (N,Y) => o => ({
+        Y,
+        N
+    })[o.case](o.value),
+    
+    map: f => o => ({
+        Y: x => Valid.Y(f(x)),
+        N: () => o
+    })[o.case](o.value)
+}
+
+const PatternToken = {
+
     Path: value =>
-        ({ case: 'Path', value, type: 'Pattern' }),
-    Part: ({ key, value }) =>
-        ({ case: 'Part', value: { key, value, type: 'Pattern' } }),
-    Variadic: ({ key, value }) =>
-        ({ case: 'Variadic', value: { key, value, type: 'Pattern' } }),
-    Unmatched: value =>
-        ({ case: 'Unmatched', value, type: 'Pattern' }),
+        ({ case: 'Path', value, type: 'PatternToken' }),
+    Part: value =>
+        ({ case: 'Part', value, type: 'PatternToken' }),
+    Variadic: value =>
+        ({ case: 'Variadic', value, type: 'PatternToken' }),
 
     fold: ({
         Path,
         Part,
-        Variadic,
-        Unmatched
+        Variadic
     }) => o => ({
         Path,
         Part,
-        Variadic,
-        Unmatched
+        Variadic
     })[o.case](o.value),
 
     infer: segment =>
         segment.startsWith(':')
-            ? value =>
-                Pattern.Part({
-                    key: segment.slice(1), value
-                })
-            : segment.startsWith('...')
-                ? value => Pattern.Variadic({
-                    key: segment.split('...')[1], value
-                })
-            : path => path === segment
-                ? Pattern.Path(segment)
-                : Pattern.Unmatched(),
+            ? PatternToken.Part(segment.slice(1))
+        : segment.startsWith('...')
+            ? PatternToken.Variadic(segment.split('...')[1])
+        : PatternToken.Path(segment),
 
-    isVariadic: x => x.case === 'Variadic',
-}
+        
+    validations: {
+        variadicPosition: tokens => {
+            const index =
+                tokens.findIndex(PatternToken.isVariadic)
 
-const Token = {
-    Path: value =>
-        ({ case: 'Path', value, type: 'Token' }),
-    Part: ({ key, value }) =>
-        ({ case: 'Part', value: { key, value, type: 'Token' } }),
-    Variadic: ({ key, value }) =>
-        ({ case: 'Variadic', value: { key, value, type: 'Token' } }),
-    Unmatched: value =>
-        ({ case: 'Unmatched', value, type: 'Token' }),
+            if (index > -1 && index != tokens.length - 1) {
+                return Valid.N(
+                    new Error(
+                        'Variadic ...' + tokens[index].value.key
+                        + ' found at position ' + index + ' of ' + tokens.length + '.  '
+                        + 'Variadic can only be in the final position.'
+                    )
+                )
+            } else {
+                return Valid.Y(tokens)
+            }
+        },
 
-    fromPattern: o => ({
-        Path: value =>
-            ({ case: 'Path', value, type }),
-        Part: ({ key, value }) =>
-            ({ case: 'Part', value: { key, value, type } }),
-        Variadic: ({ key, value }) =>
-            ({ case: 'Variadic', value: { key, value, type } }),
-        Unmatched: value =>
-            ({ case: 'Unmatched', value, type }),
-    })[o.case](o.vallue)
-}
+        variadicCount: tokens => {
+            const variadics =
+                tokens.filter(PatternToken.isVariadic)
 
-const transforms = {
-    collectVariadics: (tokens, types) => {
-
-        const index =
-            tokens.findIndex(Pattern.isVariadic)
-
-        if (index == -1) {
-            return tokens
-        }
-
-        const { key, value } = tokens[index].value
-        return tokens.slice(0, -1).concat(
-            Pattern.Variadic(
-                {
-                    key
-                    , value: value
-                        + '/'
-                        + url.split('/').slice(types.length).join('/')
-                }
-            )
-        )
-    }
-}
-
-const validations = {
-    variadicPosition: tokens => {
-        const index =
-            tokens.findIndex(Pattern.isVariadic)
-
-        if (index > -1 && index != tokens.length - 1) {
-            throw new Error(
-                'Variadic ...' + tokens[index].value.key
-                + ' found at position ' + index + ' of ' + tokens.length + '.  '
-                + 'Variadic can only be in the final position.'
-            )
+            if (variadics.length > 1) {
+                return Valid.N(
+                    new Error(
+                        'Found ' + variadics.length + ' variadics in pattern '
+                        + PatternToken.toPattern(tokens) + '.  '
+                        + 'A maxiumum of 1 variadic is allowed.'
+                    )
+                )
+            } else {
+                return Valid.Y(tokens)
+            }
         }
     },
 
-    variadicCount: tokens => {
-        const variadics =
-            tokens.filter(Pattern.isVariadic)
+    isVariadic: o => o.case === 'Variadic',
 
-        if (variadics.length > 1) {
-            throw new Error(
-                'Found ' + variadics.length + ' variadics in pattern '
-                + pattern + '.  '
-                + 'A maxiumum of 1 variadic is allowed.'
+    validate(tokens){
+        const out =
+            Object.values(PatternToken.validations).map(
+                f => f(tokens)
             )
+
+        const invalids = out.filter( x => x.case === 'N')
+            .map( x => x.value )
+
+        return invalids.length > 0
+            ? Valid.N(invalids)
+            : Valid.Y(tokens)
+    },
+
+    toString: x => ({
+        Path: x => x
+        ,Part: x => ':'+x
+        ,Variadic: x => '...'+x
+    })[x.case](x.value),
+
+    toPattern: xs => xs.map( PatternToken.toString ).join('/')
+}
+
+
+const URLToken = {
+    Path: value =>
+        ({ case: 'Path', value, type: 'URLToken' }),
+    Part: ({ key, value }) =>
+        ({ case: 'Part', value: { key, value, type: 'URLToken' } }),
+    Variadic: ({ key, value }) =>
+        ({ case: 'Variadic', value: { key, value, type: 'URLToken' } }),
+    Unmatched: ({expected, actual}) =>
+        ({ case: 'Unmatched', value: { expected, actual }, type: 'URLToken' }),
+    ExcessSegment: segment =>
+        ({ case: 'ExcessSegment', value: segment, type: 'URLToken' }),
+
+    toString: x => ({
+        Path: x => x
+        ,Part: x => ':'+x
+        ,Variadic: x => '...'+x
+        ,Unmatched: x => x
+        ,ExcessSegment: x => x
+    })[x.case](x.value),
+
+    toURL: xs => xs.map( URLToken.toString ).join('/'),
+
+    fromPattern: o => segment => ({
+        Path: expected =>
+            segment === expected 
+                ? URLToken.Path(segment)
+                : URLToken.Unmatched({ expected, actual: segment }),
+        Part: key =>
+            URLToken.Part({ key, value: segment }),
+        Variadic: key =>
+            URLToken.Variadic({ key, value: segment })
+    })[o.case](o.value),
+
+    isVariadic: o => o.case === 'Variadic',
+
+    validations: {
+        
+        excessPatterns: patternTokens => urlTokens => {
+
+            const numSegments = 
+                urlTokens.length
+
+            const numPatterns =
+                patternTokens.length
+                
+            const excessPatterns = 
+                numPatterns > numSegments
+                ? patternTokens.slice(numSegments)
+                : []
+
+            if( excessPatterns.length ){
+                return Valid.N(
+                    new Error(
+                        'The URL '+ URLToken.toURL(urlTokens) 
+                        +' had excess patterns ('
+                            + PatternToken.toPattern(excessPatterns)
+                        + ')'
+                        + 'when parsed as part of pattern:'
+                            + ' ' +PatternToken.toPattern(patternTokens)
+                    )
+                )
+            } else {
+                return Valid.Y(urlTokens)
+            }
+        },
+
+        excessSegments: patternTokens => urlTokens => {
+            const extraSegments = 
+                urlTokens.filter( x => x.case === 'ExcessSegment' )
+                
+            if ( extraSegments.length 
+                && urlTokens.slice(-1)[0].case !== 'Variadic' 
+            ){
+                return Valid.N(
+                    new Error(
+                        'Excess tokens ('
+                            + JSON.stringify(
+                                '/'+extraSegments.map( x => x.value).join('/')
+                            )
+                            + ')'
+                        + ' were found and the URLPattern:'
+                            + JSON.stringify(
+                                PatternToken.toPattern(patternTokens)
+                            )
+                              
+                        + ' did not contain a variadic for the additional'
+                        + ' values.'
+                    )
+                )
+            } else {
+                return Valid.Y(urlTokens)
+            }
         }
+        
+    },
+
+    transforms: {
+        collectVariadics: url => patternTokens => urlTokens => {
+
+            const extraSegments = 
+                urlTokens.length > patternTokens.length 
+                    ? patternTokens.slice( urlTokens.length )
+                    : []
+
+            if ( extraSegments ){
+                
+                const index =
+                    urlTokens.findIndex(URLToken.isVariadic)
+
+                if (index == -1) {
+                    return urlTokens
+                } else {
+                    const { key, value } = urlTokens[index].value
+                    
+                    return urlTokens.slice(0, -1).concat(
+                        URLToken.Variadic(
+                            {
+                                key
+                                , value: value
+                                    + '/'
+                                    + url.split('/')
+                                        .slice(patternTokens.length)
+                                        .join('/')
+                            }
+                        )
+                    )
+                }
+            } else {
+                return urlTokens
+            }
+        }
+    },
+
+    transform: (url, urlTokens, patternTokens) => {
+        
+        return Object.values(URLToken.transforms).reduce(
+            (p, f) => f (url) (patternTokens) (p),
+            urlTokens
+        )
+    },
+
+    validate(patternTokens, urlTokens){
+        const out =
+            Object.values(URLToken.validations).map(
+                f => f(patternTokens) (urlTokens)
+            )
+
+        const invalids = out.filter( x => x.case === 'N')
+            .map( x => x.value )
+
+        return invalids.length > 0
+            ? Valid.N(invalids)
+            : Valid.Y(urlTokens)
     }
 }
 
-function tokenize(pattern, url) {
+function tokenizePattern(pattern) {
 
-    const types =
-        pattern.split('/').map(Pattern.infer)
+    const patternTokens =
+        pattern.split('/').map(PatternToken.infer)
 
-    const tokens =
-        url.split('/').flatMap(
-            (segment, i) =>
-                [types[i]]
-                    .filter(Boolean)
-                    .map(f => f(segment))
+    return [patternTokens]
+            .map(PatternToken.validate)
+            .shift()
+}
+
+function tokenizeURL(patternTokens, url){
+    const urlTokens =
+        url.split('/').slice(0, patternTokens.length).map(
+            (segment, i) => 
+                URLToken.fromPattern (patternTokens[i]) (segment)
         )
 
-    validations.variadicCount(tokens)
-    validations.variadicPosition(tokens)
+    const segments =
+        url.split('/')
+    
+    const numSegments = 
+        segments.length
 
-    return transforms.collectVariadics(
-        tokens, types
-    )
+    const numPatterns =
+        patternTokens.length
+        
+    const excessSegments = 
+        numSegments > numPatterns
+        ? segments.slice(numPatterns).map(
+            URLToken.ExcessSegment
+        )
+        : []
+     
+    const completeTokens =
+        urlTokens
+        .concat(excessSegments)
+
+    
+    return [URLToken.validate(patternTokens, completeTokens)]
+        .map(
+            Valid.map(
+                () => URLToken.transform(url, completeTokens, patternTokens)
+            )
+        )
+        .shift()
 }
 
 
 module.exports = {
-    tokenize, Pattern
+    tokenizePattern
+    , tokenizeURL
+    , PatternToken
 }
