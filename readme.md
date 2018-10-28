@@ -7,7 +7,7 @@ Warning: These docs do not match reality yet.
 Quick Start
 ===========
 
-```js
+```jsx
 const Route = 
     superouter.type('Route', {
         Home: '/',
