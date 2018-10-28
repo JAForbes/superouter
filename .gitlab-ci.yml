@@ -12,3 +12,10 @@ test:
   script:
    - npm install
    - npm test
+
+eslint:
+  stage: test
+  script:
+    - npm install
+    - eslint .
+    
