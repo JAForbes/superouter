@@ -2,7 +2,7 @@
   "name": "superouter",
   "version": "0.0.2",
   "description": "",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
     "test": "npm-run-all test:*",
     "test:test": "nyc --reporter=lcov tape \"./test/*.js\" | tap-spec",
@@ -10,7 +10,7 @@
     "test:report-coverage": "nyc report",
     "predist": "rm -fr dist && mkdir dist",
     "dist": "npm-run-all --parallel dist:*",
-    "dist:fold": "browserify index.js --standalone superouter | uglifyjs -mc > dist/superouter.min.js",
+    "dist:fold": "browserify lib/index.js --standalone superouter | uglifyjs -mc > dist/superouter.min.js",
     "release": "git push && npm version minor && npm publish",
     "preversion": "npm test"
   },
