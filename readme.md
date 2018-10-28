@@ -7,7 +7,11 @@ Warning: These docs do not match reality yet.
 Quick Start
 ===========
 
+`npm install superouter`
+
 ```jsx
+const superouter = require('superouter')
+
 const Route = 
     superouter.type('Route', {
         Home: '/',

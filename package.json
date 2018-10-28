@@ -8,6 +8,7 @@
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
+  "repository": "git@gitlab.com:harth/superouter.git",
   "devDependencies": {
     "eslint": "^5.8.0"
   }
