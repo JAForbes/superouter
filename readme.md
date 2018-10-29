@@ -1,6 +1,13 @@
 superouter
 ----------
 
+[![pipeline status](https://gitlab.com/harth/superouter/badges/master/pipeline.svg)](https://gitlab.com/harth/superouter/commits/master)
+
+
+
+[![coverage report](https://gitlab.com/harth/superouter/badges/master/coverage.svg)](https://gitlab.com/harth/superouter/commits/master)
+
+
 Warning: These docs do not match reality yet.
 ==============================================
 
