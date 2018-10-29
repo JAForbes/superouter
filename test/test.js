@@ -200,3 +200,53 @@ test('tokenizeURL', t => {
 
     t.end()
 })
+
+test('type', t => {
+    t.comment('ValidRoute'); {
+        const Route = type('Route', {
+            Home: '/',
+            Post: '/post/:post',
+            Settings: '/settings/...settingsRoute'
+        })
+
+
+        t.equals( 
+            Route.safe.Home().case
+            , 'Y'
+            , 'Empty pattern can be created without args' 
+        )
+
+        t.equals( 
+            Route.safe.Home({ too: 1, many: 2 }).case
+            , 'N'
+            , 'Empty pattern cannot be created with args' 
+        )
+
+        t.equals(
+            Route.safe.Post().case
+            , 'N'
+            , 'Arg pattern cannot be created without args'
+        )
+
+        
+        t.equals(
+            Route.safe.Settings({ wrong: 1, or: 1, missing: 1}).case
+            , 'N'
+            , 'Arg pattern cannot be created with wrong or missing args'
+        )
+
+        t.equals(
+            Route.Settings({ settingsRoute: '1/2/3'}).value.settingsRoute,
+            '1/2/3',
+            'Route constructor matches input pattern and args'
+        )
+
+        console.log(
+            Route.matchesOr(
+                x => x, '/post/yes/wow'
+            )
+        )
+    }
+
+    t.end()
+})
