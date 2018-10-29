@@ -108,3 +108,95 @@ test('tokenizePatterns', t => {
 
     t.end()
 })
+
+test('tokenizeURL', t => {
+    const patternTokens = tokenizePattern(':a/:b/staticPart/:d/...f')
+
+    t.comment('Valid URL'); {
+    
+        const url = 'wow/such/staticPart/stuff/that/is/good'
+    
+        const out = 
+            tokenizeURL(
+                patternTokens.value,
+                url
+            )
+    
+        t.equals(
+            out.case,
+            'Y',
+            'The tokenizer can handle all PatternToken types'
+        )
+    
+        const cases = 
+            out.value.map( x => x.case ).join('|')
+    
+        t.equals(
+            'Part|Part|Path|Part|Variadic', 
+            cases, 
+            'tokenizeURL specified the correct URLToken types'
+        )
+    
+        t.equals(
+            URLToken.toURL(out.value),
+            url,
+            'URLToken can recreate the input URL'
+        )
+    }
+
+    t.comment('Invalid URL: Unmatched Paths'); {
+        const noStaticPart = 'wow/such/stuff/that/is/good'
+
+        const out = 
+            tokenizeURL(
+                patternTokens.value,
+                noStaticPart
+            )
+
+        t.equals(out.case, 'N', 'Invalid static match detected')
+
+        t.equals(
+            out.value.map( x => x.case ).join('|')
+            ,'UnmatchedPaths'
+        )
+    }
+
+    
+    t.comment('Invalid URL: ExcessSegments'); {
+        const url = 'a/b/:c'
+        const excessSegments = 'a/b/c/d'
+
+        const out = 
+            tokenizeURL(
+                tokenizePattern(url).value,
+                excessSegments
+            )
+
+        t.equals(out.case, 'N', 'Invalid static match detected')
+
+        t.equals(
+            out.value.map( x => x.case ).join('|')
+            ,'ExcessSegment'
+        )
+    }
+
+    t.comment('Invalid URL: ExcessPatterns'); {
+        const url = 'a/b/c/:d'
+        const excessSegments = 'a/b/c'
+
+        const out = 
+            tokenizeURL(
+                tokenizePattern(url).value,
+                excessSegments
+            )
+
+        t.equals(out.case, 'N', 'Invalid static match detected')
+
+        t.equals(
+            out.value.map( x => x.case ).join('|')
+            ,'ExcessPattern'
+        )
+    }
+
+    t.end()
+})
