@@ -6,39 +6,9 @@ const {
     URLToken, 
     PatternToken, 
     Valid,
-    type 
+    type$safe,
+    type
 } = require('../lib')
-
-
-// const routes = {
-//     '/': () => 'home',
-//     '/posts/:post': ({ post }) => ({ post }),
-//     '/about': () => 'about',
-//     '/a/:b/c/:d': () => 'yes'
-// }
-
-
-// const urls = [
-//     '/', '/posts/hi-there', '/nomatch/.exe', '/about', '/a/1/c/2'
-// ]
-
-// {
-//     const pattern = 'posts/:post/...rest'
-//     const url = 'posts/hi-there/2/3'
-//     const patternTokens = 
-//         tokenizePattern(pattern)
-
-//     const urlTokens =
-//         patternTokens.case === 'Y'
-//         ? tokenizeURL(patternTokens.value, url)
-//         : []
-
-//     console.log({
-//         patternTokens, urlTokens
-//     })
-
-
-// }
 
 test('tokenizePatterns', t => {
 
@@ -100,7 +70,7 @@ test('tokenizePatterns', t => {
 
             t.equals(
                 output.value.map( x => x.case).join('|'), 
-                'VariadicPosition|VariadicCount',
+                'VariadicPosition|VariadicCount|DuplicatePart',
                 'Validation detects multiple variadics'
             )
         }
@@ -240,13 +210,87 @@ test('type', t => {
             '1/2/3',
             'Route constructor matches input pattern and args'
         )
+    }
 
-        console.log(
-            Route.matchesOr(
-                x => x, '/post/yes/wow'
+    t.comment('Invalid Route'); {
+
+        const VRoute = type$safe('Route', {
+            Post: '/post/:post',
+            DuplicateDef: '/post/:post',
+            DuplicatePart: '/post/:a/:a',
+            WeirdVar: '/...weird/:var',
+            TooMany: '/...weird/...weird'
+        })
+
+        t.equals(VRoute.case, 'N', 'Invalid Route definitions reported')
+
+        t.equals(
+            VRoute.value.WeirdVar.filter( x => x.case === 'VariadicPosition' )
+                .map( x => x.case ).shift()
+            ,'VariadicPosition'
+            ,'Route with incorrect Variadic position reported'
+        )
+
+        t.equals(
+            VRoute.value.TooMany.filter( x => x.case === 'VariadicCount' )
+                .map( x => x.case )
+                .shift()
+            ,'VariadicCount'
+            ,'Route with incorrect number of variadics reported'
+        )
+
+        t.equals(
+            [].concat(
+                VRoute.value
+                    .DuplicateDef.filter( x => x.case === 'DuplicateDef')
+                ,VRoute.value
+                    .Post.filter( x => x.case === 'DuplicateDef')
             )
+                .map( x => x.case )
+                .join('|')
+            ,'DuplicateDef|DuplicateDef'
+            ,'Route with multiple defintions with the same tokens reported'
+        )
+
+        t.equals(
+            VRoute.value.DuplicatePart.filter( x => x.case === 'DuplicatePart')
+                .map( x => x.case )
+                .shift()
+            ,'DuplicatePart'
+            ,'Route with repeated variable bindings reported'
         )
     }
+    t.comment('Route.matchesOr'); {
+        // console.log(
+        //     Route.matchesOr(
+        //         x => x, '/post/yes'
+        //     )
+        // )
+    
+        // var r = 
+        // Route.matchOr( Route.Home(), window.location.pathname )
+    
+        // view(r)
+    }
+
+    t.comment('Route.matchOr'); {
+        // console.log(
+        //     Route.matchesOr(
+        //         x => x, '/post/yes'
+        //     )
+        // )
+    
+        // var r = 
+        // Route.matchOr( Route.Home(), window.location.pathname )
+    
+        // view(r)
+    }
+
+    t.comment('Route.match'); {}
+
+    t.comment('Route.toURL'); {}
 
     t.end()
 })
+
+
