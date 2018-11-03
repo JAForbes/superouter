@@ -206,7 +206,7 @@ test('type', t => {
         )
 
         t.equals(
-            Route.Settings({ settingsRoute: '1/2/3'}).value.settingsRoute,
+            Route.of.Settings({ settingsRoute: '1/2/3'}).value.settingsRoute,
             '1/2/3',
             'Route constructor matches input pattern and args'
         )
@@ -260,35 +260,70 @@ test('type', t => {
             ,'Route with repeated variable bindings reported'
         )
     }
-    t.comment('Route.matchesOr'); {
-        // console.log(
-        //     Route.matchesOr(
-        //         x => x, '/post/yes'
-        //     )
-        // )
-    
-        // var r = 
-        // Route.matchOr( Route.Home(), window.location.pathname )
-    
-        // view(r)
-    }
-
     t.comment('Route.matchOr'); {
-        // console.log(
-        //     Route.matchesOr(
-        //         x => x, '/post/yes'
-        //     )
-        // )
-    
-        // var r = 
-        // Route.matchOr( Route.Home(), window.location.pathname )
-    
-        // view(r)
-    }
+        const Route = type('Route', {
+            Home: '/',
+            Settings: '/settings/:settings',
+            Album: '/album/:album_id',
+            AlbumPhoto: '/album/:album_id/photo/:file_id',
+            Tag: '/tag/:tag',
+            TagFile: '/tag/:tag/photo/:file_id'
+        })
 
-    t.comment('Route.match'); {}
+        t.equals(
+            'AlbumPhoto|abc123|123',
+            [Route.matchOr( 
+                () => Route.of.Home(),
+                '/album/abc123/photo/123'
+            )]
+            .flatMap(
+                x => [x.case, x.value.album_id, x.value.file_id]
+            )
+            .join('|')
+        )
+
+        
+        t.equals(
+            'ExcessSegment',
+            [Route.matchOr( 
+                err => err,
+                '/album/abc123/photo/123/other'
+            )]
+            .flatMap( x => x.AlbumPhoto )
+            .map(
+                x => x.case
+            )
+            .join('|')
+        )
+
+        const view =
+            Route.fold({
+                Home: () => '/',
+                Settings: ({ settings }) => 
+                    '/settings/:'+settings,
+                Album: ({ album_id }) => 
+                    '/album/'+album_id,
+                AlbumPhoto: ({ album_id, file_id}) => 
+                    '/album/'+album_id+'/photo/'+file_id,
+                Tag: ({ tag }) => '/tag/'+tag,
+                TagFile: ({ tag, file_id }) => '/tag/'+tag+'/photo/'+file_id
+            })
+
+        t.equals(
+            '/album/abc123/photo/123',
+            [Route.matchOr( 
+                () => Route.of.Home(),
+                '/album/abc123/photo/123'
+            )
+            ]
+            .map(view)
+            .shift()
+        )
+    }
 
     t.comment('Route.toURL'); {}
+
+    t.comment('Multiple valid matches sorted by specificity'); {}
 
     t.end()
 })

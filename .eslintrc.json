@@ -12,12 +12,7 @@
         "arrow-body-style": "off",
         "arrow-parens": "off",
         "block-scoped-var": "error",
-        "brace-style": [
-            "error",
-            "1tbs"
-        ],
         "callback-return": "error",
-        "camelcase": "error",
         "class-methods-use-this": "error",
         "comma-dangle": "error",
         "comma-spacing": "off",
@@ -53,7 +48,6 @@
         "id-match": "error",
         "implicit-arrow-linebreak": "off",
         "indent": "off",
-        "indent-legacy": "error",
         "init-declarations": "error",
         "jsx-quotes": "error",
         "line-comment-position": "error",
@@ -62,17 +56,7 @@
             "unix"
         ],
         "max-len": "error",
-        "multiline-comment-style": [
-            "error",
-            "separate-lines"
-        ],
         "new-parens": "error",
-        "newline-after-var": [
-            "error",
-            "always"
-        ],
-        "newline-before-return": "off",
-        "newline-per-chained-call": "off",
         "no-alert": "error",
         "no-array-constructor": "error",
         "no-async-promise-executor": "error",
@@ -113,11 +97,6 @@
         "no-multiple-empty-lines": "error",
         "no-native-reassign": "error",
         "no-negated-in-lhs": "error",
-        "no-new": "error",
-        "no-new-func": "error",
-        "no-new-object": "error",
-        "no-new-require": "error",
-        "no-new-wrappers": "error",
         "no-octal-escape": "error",
         "no-param-reassign": "error",
         "no-path-concat": "error",
@@ -157,8 +136,6 @@
         "no-warning-comments": "off",
         "no-with": "error",
         "nonblock-statement-body-position": "error",
-        "object-curly-newline": "error",
-        "object-shorthand": "error",
         "one-var": "off",
         "one-var-declaration-per-line": "error",
         "operator-assignment": "error",
