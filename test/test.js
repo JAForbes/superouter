@@ -170,11 +170,11 @@ test('tokenizeURL', t => {
 
         const toArgsAssert =
             [
-                [URLToken.ExcessSegment('hi'), {}],
-                [URLToken.Path('wow'), {}],
-                [URLToken.Part({ key: 'a', value: 'b' }), { a: 'b' }],
-                [URLToken.Unmatched({ expected: 'this', actual: 'that' }), {}],
-                [URLToken.Variadic({ key: 'c', value: 'd' }), { c: 'd' }]
+                [URLToken.ExcessSegment('hi'), {}]
+                ,[URLToken.Path('wow'), {}]
+                ,[URLToken.Part({ key: 'a', value: 'b' }), { a: 'b' }]
+                ,[URLToken.Unmatched({ expected: 'this', actual: 'that' }), {}]
+                ,[URLToken.Variadic({ key: 'c', value: 'd' }), { c: 'd' }]
             ]
             .map(
                 ([a,b]) => [URLToken.toArgs([a]), b]
@@ -203,9 +203,9 @@ test('tokenizeURL', t => {
 test('type', t => {
     t.comment('ValidRoute'); {
         const Route = type('Route', {
-            Home: '/',
-            Post: '/post/:post',
-            Settings: '/settings/...settingsRoute'
+            Home: '/'
+            ,Post: '/post/:post'
+            ,Settings: '/settings/...settingsRoute'
         })
 
 
@@ -250,11 +250,11 @@ test('type', t => {
     t.comment('Invalid Route'); {
 
         const def = {
-            Post: '/post/:post',
-            DuplicateDef: '/post/:post',
-            DuplicatePart: '/post/:a/:a',
-            WeirdVar: '/...weird/:var',
-            TooMany: '/...weird/...weird'
+            Post: '/post/:post'
+            ,DuplicateDef: '/post/:post'
+            ,DuplicatePart: '/post/:a/:a'
+            ,WeirdVar: '/...weird/:var'
+            ,TooMany: '/...weird/...weird'
         }
 
         const VRoute = type$safe('Route', def)
@@ -305,12 +305,12 @@ test('type', t => {
     }
     t.comment('Route.matchOr'); {
         const Route = type('Route', {
-            Home: '/',
-            Settings: '/settings/:settings',
-            Album: '/album/:album_id',
-            AlbumPhoto: '/album/:album_id/photo/:file_id',
-            Tag: '/tag/:tag',
-            TagFile: '/tag/:tag/photo/:file_id'
+            Home: '/'
+            ,Settings: '/settings/:settings'
+            ,Album: '/album/:album_id'
+            ,AlbumPhoto: '/album/:album_id/photo/:file_id'
+            ,Tag: '/tag/:tag'
+            ,TagFile: '/tag/:tag/photo/:file_id'
         })
 
         t.equals(
@@ -343,15 +343,15 @@ test('type', t => {
 
         const view =
             Route.fold({
-                Home: () => '/',
-                Settings: ({ settings }) => 
-                    '/settings/:'+settings,
-                Album: ({ album_id }) => 
-                    '/album/'+album_id,
-                AlbumPhoto: ({ album_id, file_id}) => 
-                    '/album/'+album_id+'/photo/'+file_id,
-                Tag: ({ tag }) => '/tag/'+tag,
-                TagFile: ({ tag, file_id }) => '/tag/'+tag+'/photo/'+file_id
+                Home: () => '/'
+                ,Settings: ({ settings }) => 
+                    '/settings/:'+settings
+                ,Album: ({ album_id }) => 
+                    '/album/'+album_id
+                ,AlbumPhoto: ({ album_id, file_id}) => 
+                    '/album/'+album_id+'/photo/'+file_id
+                ,Tag: ({ tag }) => '/tag/'+tag
+                ,TagFile: ({ tag, file_id }) => '/tag/'+tag+'/photo/'+file_id
             })
 
         t.equals(
@@ -369,12 +369,12 @@ test('type', t => {
 
     t.comment('Route.toURL'); {
         const Route = type('Route', {
-            Home: '/',
-            Settings: '/settings/:settings',
-            Album: '/album/:album_id',
-            AlbumPhoto: '/album/:album_id/photo/:file_id',
-            Tag: '/tag/:tag',
-            TagFile: '/tag/:tag/photo/:file_id/...rest'
+            Home: '/'
+            ,Settings: '/settings/:settings'
+            ,Album: '/album/:album_id'
+            ,AlbumPhoto: '/album/:album_id/photo/:file_id'
+            ,Tag: '/tag/:tag'
+            ,TagFile: '/tag/:tag/photo/:file_id/...rest'
         })
 
         t.equals(
@@ -388,10 +388,10 @@ test('type', t => {
 
     t.comment('Multiple valid matches sorted by specificity'); {
         const Route = type('Route', {
-            Edit: '/account/:account_id',
-            Create: '/account/create',
-            Variadic: '/account/:account_id/...rest',
-            Precise: '/account/:account_id/:precise'
+            Edit: '/account/:account_id'
+            ,Create: '/account/create'
+            ,Variadic: '/account/:account_id/...rest'
+            ,Precise: '/account/:account_id/:precise'
         })
 
         t.equals(
