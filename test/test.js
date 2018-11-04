@@ -277,9 +277,10 @@ test('type', t => {
                 '/album/abc123/photo/123'
             )]
             .flatMap(
-                x => [x.case, x.value.album_id, x.value.file_id]
+                x =>  [x.case, x.value.album_id, x.value.file_id]
             )
-            .join('|')
+            .join('|'),
+            'matchOr instantiates the correct Route with data from the url'
         )
 
         
@@ -293,7 +294,8 @@ test('type', t => {
             .map(
                 x => x.case
             )
-            .join('|')
+            .join('|'),
+            'matchOr returns the errors that prevented a match'
         )
 
         const view =
@@ -317,13 +319,55 @@ test('type', t => {
             )
             ]
             .map(view)
-            .shift()
+            .shift(),
+            'matchOr matches valid patterns'
         )
     }
 
-    t.comment('Route.toURL'); {}
+    t.comment('Route.toURL'); {
+        const Route = type('Route', {
+            Home: '/',
+            Settings: '/settings/:settings',
+            Album: '/album/:album_id',
+            AlbumPhoto: '/album/:album_id/photo/:file_id',
+            Tag: '/tag/:tag',
+            TagFile: '/tag/:tag/photo/:file_id'
+        })
 
-    t.comment('Multiple valid matches sorted by specificity'); {}
+        t.equals(
+            Route.toURL(Route.of.TagFile({ tag:'beach', file_id: 123 })),
+            '/tag/beach/photo/123',
+            'toURL recreates a URL that could have instantiated a route'
+        )
+    }
+
+    t.comment('Multiple valid matches sorted by specificity'); {
+        const Route = type('Route', {
+            Edit: '/account/:account_id',
+            Create: '/account/create',
+            Variadic: '/account/:account_id/...rest',
+            Precise: '/account/:account_id/:precise'
+        })
+
+        t.equals(
+            Route.matches(
+                '/account/create'
+            )
+            .value.map( x => x.case ).join('|'),
+            'Create|Edit',
+            'Route matches returned in order of specificity (Part/Path)'
+        )
+
+        
+        t.equals(
+            Route.matches(
+                '/account/123/update'
+            )
+            .value.map( x => x.case ).join('|'),
+            'Precise|Variadic',
+            'Route matches returned in order of specificity (Part/Variadic)'
+        )
+    }
 
     t.end()
 })
