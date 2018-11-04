@@ -169,6 +169,8 @@ Route.of.Settings({ missing: 1, things: 2 })
 //=> TypeError: ...
 ```
 
+---
+
 #### `Route.fold` 
 
 `({ [routeCaseNames]: ({ ...routeArgs }) => a }) => Route => a`
@@ -191,6 +193,8 @@ For some more advanced error checking try [static-sum-type](https://gitlab.com/J
 `static-sum-type` will throw if you have missed cases or specified too many cases.
 
 `Route.fold` is especially useful to map `Route` to views in your application in a manner similar to `<Switch>` in `react-router`.
+
+---
 
 #### `Route.matchOr` 
 
@@ -237,12 +241,16 @@ Route.matchOr(
 )
 ```
 
+---
+
 ### `Route.matches`
 
 `string => Valid.Y( Route[] ) | Valid.N ( StrMap( CaseName, Error[] ) )`
 
 `Route.matches` is a lower level alternative to `Route.matchOr` which either returns all the valid matching routes (if there are any) or all the errors
 that prevented matches keyed by the name of the route cases.
+
+---
 
 ### `Route.toURL`
 
@@ -264,6 +272,12 @@ Route.toURL( Route.Tag({ tag: 'beach' }) )
 
 ### Advanced
 
+> 🚨 **Warning** 🚨
+>
+> There is absolutely no need to ever use any of the functionality below.  You can very happily and safely only use the above API.  Everything below is the primatives used to create the higher level API.  It's exposed because there's no danger in doing so, and it's documented because it's exposed.
+
+---
+
 #### `Valid`
 
 This library uses a sum-type `Valid` to safely model invalid route matches.  The user friendly API traverses this type and throws on errors.  But if one 
@@ -282,6 +296,8 @@ a function without throwing an error.
 
 `Valid` includes some helper functions like `fold`, `bifold` and `map`.
 
+---
+
 #### `tokenizePattern`
 
 `string -> Valid.Y( PatternToken[] ) | Valid.N( PatternToken.Error[] )`
@@ -292,6 +308,8 @@ The response is wrapped in a `Valid` to model the branching behaviour.
 
 `PatternToken.Error` is documented further in the Error Types section.
 
+---
+
 #### `tokenizeURL`
 
 `(PatternToken[], string) -> Valid.Y( URLToken[] ) | Valid.N( URLToken.Error[] )`
@@ -301,6 +319,8 @@ Convert an array of `PatternToken`'s and a `url` into an array of `URLToken`'s.
 `URLToken.Error` is documented further in the Error Types section.
 
 The response is wrapped in a `Valid` to model the branching behaviour.
+
+---
 
 #### `PatternToken`
 
@@ -315,6 +335,8 @@ data PatternToken
     | Part string 
     | Variadic string
 ```
+
+---
 
 #### `URLToken`
 
@@ -333,6 +355,8 @@ data URLToken
 ```
 
 Each `URLToken` has a specificity which helps guide higher level functions to choose the most accurate route match.
+
+---
 
 #### Error Types
 
