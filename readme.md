@@ -264,14 +264,6 @@ Route.toURL( Route.Tag({ tag: 'beach' }) )
 
 ### Advanced
 
-#### `tokenizePattern`
-
-#### `tokenizeURL`
-
-#### `PatternToken`
-
-#### `URLToken`
-
 #### `Valid`
 
 This library uses a sum-type `Valid` to safely model invalid route matches.  The user friendly API traverses this type and throws on errors.  But if one 
@@ -279,7 +271,73 @@ wants to safely analyze all the invalid patterns without using a `try {} catch(e
 
 You'll encounter `Valid` if you interact with some more advanced functions exposed by the library including `tokenizePattern`, `tokenizeURL`, `type$safe`, or `Route.matches`.
 
+`Valid` is an example of a static sum type.  It's simply an object with 2 constructors `Y` and `N`.
+
+`Valid.Y(x)` will return an object `{ type: 'Valid', case: 'Y', value: x }`
+
+And `Valid.N(x)` will return an object `{ type: 'Valid', case: 'N', value: x }`.
+
+It's simply a way to annotate that there's some kind of error branching in
+a function without throwing an error.
+
+`Valid` includes some helper functions like `fold`, `bifold` and `map`.
+
+#### `tokenizePattern`
+
+`string -> Valid.Y( PatternToken[] ) | Valid.N( PatternToken.Error[] )`
+
+Convert a pattern string into an array of tokens or an array of PatternToken errors.
+
+The response is wrapped in a `Valid` to model the branching behaviour.
+
+`PatternToken.Error` is documented further in the Error Types section.
+
+#### `tokenizeURL`
+
+`(PatternToken[], string) -> Valid.Y( URLToken[] ) | Valid.N( URLToken.Error[] )`
+
+Convert an array of `PatternToken`'s and a `url` into an array of `URLToken`'s.
+
+`URLToken.Error` is documented further in the Error Types section.
+
+The response is wrapped in a `Valid` to model the branching behaviour.
+
+#### `PatternToken`
+
+A data structure that models the different types of supported patterns used
+by the `superouter.type` constructor.
+
+There are 3 types of patterns: 
+
+```hs
+data PatternToken 
+    = Path string 
+    | Part string 
+    | Variadic string
+```
+
+#### `URLToken`
+
+A data structure that models the matching of segments of a URL to segments of a `PatternToken`.
+
+There are 5 types of patterns: 
+
+```hs
+data URLToken 
+    = Unmatched { expected::string, actual::string } 
+    | ExcessSegment string 
+    | Path string 
+    | Part { key::string, value::string }
+    | Variadic { key::string, value::string }
+    
+```
+
+Each `URLToken` has a specificity which helps guide higher level functions to choose the most accurate route match.
+
 #### Error Types
+
+You will encounter different types of errors when using the more advanced aspects of `superouter`.  Below is a brief explanation of each type of error and the circumstance that would trigger them.
+
 
 | Type         | Case          | When 
 |--------------|---------------|------
