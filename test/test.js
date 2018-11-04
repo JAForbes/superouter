@@ -374,7 +374,7 @@ test('type', t => {
             Album: '/album/:album_id',
             AlbumPhoto: '/album/:album_id/photo/:file_id',
             Tag: '/tag/:tag',
-            TagFile: '/tag/:tag/photo/:file_id/...rest',
+            TagFile: '/tag/:tag/photo/:file_id/...rest'
         })
 
         t.equals(
