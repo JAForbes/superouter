@@ -22,11 +22,11 @@ const Route =
         Settings: '/settings/...rest'
     })
 
-Route.Home() 
+Route.of.Home() 
 //=> { type: 'Route', case: 'Home' }
-Route.Post({ post }) 
+Route.of.Post({ post }) 
 //=> { type: 'Route', case: 'Post', value: { post }}
-Route.Settings({ rest: '/a/b/c' })
+Route.of.Settings({ rest: '/a/b/c' })
 // => { type: 'Route', case: 'Settings', value: 'rest' }
 
 const view = 
@@ -37,27 +37,24 @@ const view =
         }
     )
 
-view ( Route.Home() ) //=> <Home />
+view ( Route.of.Home() ) //=> <Home />
 
-Route.matchOr( Route.Home(), '/settings/1/2/3' )
+Route.matchOr( Route.of.Home(), '/settings/1/2/3' )
 //=> Route.Settings({ rest: '1/2/3' })
-
-Route.match( '/settings/1/2/3' )
-//=> Valid.Y( Route.Settings({ rest: '1/2/3' }) )
-
-Route.match( '/posts/how-to-read/extra/segments' )
-//=> Valid.N([ new Error("Excess route segment ...") ])
 
 const renderRoute = () => {
     const url = window.location.pathname
 
     React.render( 
-        view( Route.matchOr( Route.Home(), url ) )
+        view( Route.matchOr( () => Route.of.Home(), url ) )
         , document.body 
     )
 }
 
+// Respond to history
 history.onpopstate( () => renderRoute() )
+
+// Render initial route
 renderRoute()
 ```
 
@@ -86,7 +83,7 @@ E.g. the following patterns can match the same URL, but one is more specific.
 | Type          | Pattern                 | 
 |---------------|-------------------------|
 | Less Specific | `/accounts/:account_id` |
-| More Specific | `/accounts/create/`     |
+| More Specific | `/accounts/create`     |
 
 If we had a url `/accounts/create` both patterns will match, but clearly a particular pattern is the intended match.  Most routers rely on definition order but this library will rank matches by specificity and return the best match.
 
@@ -119,7 +116,9 @@ Because the data structures used by this library are part of the exposed API, yo
 API
 ===
 
-### `superouter.type({ [caseName]: patternString })`
+### `superouter.type`
+
+`superouter.type({ [caseName]: patternString })`
 
 Defines a `Route` type for your application.
 
@@ -143,6 +142,7 @@ The `patternString` can include the following forms.
 
 `patternString` types can not be mixed.  So `:...text` is not valid.
 
+---
 
 ### `Route`
 
@@ -157,9 +157,9 @@ To safely create a `Route` instance from a `url`, use `Route.matchOr`.
 ```js
 
 const Route =
-    superrouter('Route', {
+    superouter.type('Route', {
         Home: '/',
-        Settings: '/settings/:section/:setting
+        Settings: '/settings/:section/:setting'
     })
 
 Route.of.Settings({ section: 'ci', settings: 'access' })
@@ -169,7 +169,7 @@ Route.of.Settings({ missing: 1, things: 2 })
 //=> TypeError: ...
 ```
 
-#### Route.fold 
+#### `Route.fold` 
 
 `({ [routeCaseNames]: ({ ...routeArgs }) => a }) => Route => a`
 
@@ -192,9 +192,13 @@ For some more advanced error checking try [static-sum-type](https://gitlab.com/J
 
 `Route.fold` is especially useful to map `Route` to views in your application in a manner similar to `<Switch>` in `react-router`.
 
-#### Route.matchOr 
+#### `Route.matchOr` 
 
 `( (Error[]) => Route, url ) => Route`
+
+`matchOr` accepts a callback to handle url's that can't be matched and a `url` to try to match.
+
+If no match can be found the callback is executed to allow the user to return from unexpected url's.
 
 ```js
 const Route = type('Route', {
@@ -203,7 +207,7 @@ const Route = type('Route', {
     Album: '/album/:album_id',
     AlbumPhoto: '/album/:album_id/photo/:file_id',
     Tag: '/tag/:tag',
-    TagList: '/tag'
+    TagList: '/tag',
     TagFile: '/tag/:tag/photo/:file_id'
 })
 
@@ -219,10 +223,12 @@ Route.matchOr(
     '/unknown/route'
 )
 //=> Route.of.Home()
+```
 
 `matchOr` also passes in all the errors keyed by the case name of the routes
-to the otherwise function, so you can have custom logic that returns different default branches depending on the matching errors.
+to the callback, so you can have custom logic that returns different default branches depending on the matching errors.
 
+```js
 Route.matchOr(
     errs => errs.TagFile.find( x => x.case === 'ExcessPattern' )
         ? Route.TagList()
@@ -231,14 +237,14 @@ Route.matchOr(
 )
 ```
 
-### Route.matches
+### `Route.matches`
 
 `string => Valid.Y( Route[] ) | Valid.N ( StrMap( CaseName, Error[] ) )`
 
 `Route.matches` is a lower level alternative to `Route.matchOr` which either returns all the valid matching routes (if there are any) or all the errors
 that prevented matches keyed by the name of the route cases.
 
-### Route.toURL
+### `Route.toURL`
 
 `Route => string`
 
@@ -258,21 +264,29 @@ Route.toURL( Route.Tag({ tag: 'beach' }) )
 
 ### Advanced
 
-#### Error Types
+#### `tokenizePattern`
 
-| Type         | Case          | When 
-|--------------|---------------|------
-| PatternToken | DuplicateDef  | When two patterns in a route defintion are effectively the same.
-| PatternToken | DuplicatePart | When two bindings within a pattern have the same name. 
-| PatternToken | VariadicPosition | When a variadic pattern is not in the final position. 
-| PatternToken | VariadicCount | When there is more than one variadic in a pattern.
-| URLToken | UnmatchedPaths | When a path segment was found but it did not match the expected value.
-| URLToken | ExcessSegment | When a URL had more segments than a pattern had expected and there was no variadic to consume the excess segments.
-| URLToken | ExcessPattern | When a URL did not have enough segments to satisfy a pattern.
+#### `tokenizeURL`
 
-#### Valid
+#### `PatternToken`
+
+#### `URLToken`
+
+#### `Valid`
 
 This library uses a sum-type `Valid` to safely model invalid route matches.  The user friendly API traverses this type and throws on errors.  But if one 
 wants to safely analyze all the invalid patterns without using a `try {} catch(e){...}` `Valid` can be extremely useful.
 
 You'll encounter `Valid` if you interact with some more advanced functions exposed by the library including `tokenizePattern`, `tokenizeURL`, `type$safe`, or `Route.matches`.
+
+#### Error Types
+
+| Type         | Case          | When 
+|--------------|---------------|------
+| `PatternToken` | `DuplicateDef`  | When two patterns in a route defintion are effectively the same.
+| `PatternToken` | `DuplicatePart` | When two bindings within a pattern have the same name. 
+| `PatternToken` | `VariadicPosition` | When a variadic pattern is not in the final position. 
+| `PatternToken` | `VariadicCount` | When there is more than one variadic in a pattern.
+| `URLToken` | `UnmatchedPaths` | When a path segment was found but it did not match the expected value.
+| `URLToken` | `ExcessSegment` | When a URL had more segments than a pattern had expected and there was no variadic to consume the excess segments.
+| `URLToken` | `ExcessPattern` | When a URL did not have enough segments to satisfy a pattern.
