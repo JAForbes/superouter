@@ -7,10 +7,6 @@ superouter
 
 [![coverage report](https://gitlab.com/harth/superouter/badges/master/coverage.svg)](https://gitlab.com/harth/superouter/commits/master)
 
-
-Warning: These docs do not match reality yet.
-==============================================
-
 Quick Start
 ===========
 
@@ -73,6 +69,8 @@ What?
 - Predictable
 - Simple
 - Composeable
+- Server + Client
+- Serializable
 
 #### Predictable
 
@@ -80,14 +78,29 @@ In the land of SPA's, routing bugs are probably the most frustrating to debug, b
 
 The standard approach to routing is to generate a regex and pick the first match that works.
 
-What this library does differently is handle the logic of routing with a parser that can be stepped through which then emits a known domain of standard structures that explains the decisions it made and why there may have been an error.
+What this library does differently is handle the logic of routing with a parser that can justify and rank its decisions which can lead to 
+better matches that don't rely on definition order.
 
-You can then take that stream of known structures and very easily connect it to the history API or even server side routing.  It's exactly the kind of thing you don't realise you need until you do.
+E.g. the following patterns can match the same URL, but one is more specific.
 
+| Type          | Pattern                 | 
+|---------------|-------------------------|
+| Less Specific | `/accounts/:account_id` |
+| More Specific | `/accounts/create/`     |
+
+If we had a url `/accounts/create` both patterns will match, but clearly a particular pattern is the intended match.  Most routers rely on definition order but this library will rank matches by specificity and return the best match.
+
+You can then take that stream of known structures and very easily connect it to the history API or server side routing.  It's exactly the kind of thing you don't realise you need until you do.
 
 #### Data Driven
 
 This library uses a specification for it's data structures called [static-sum-type](https://gitlab.com/JAForbes/static-sum-type).  You can take the output and generate your own framework or application behaviour in a standard structured way.  You can also persist / serialize and transfer these data structures because reference equality is never relied upon.
+
+This means you can too fun things like have your API define its endpoints with superouter and then send type information over the wire to generate constructors for a client side SDK for better validation.
+
+Or you can store route information as analytics and replay them later without losing accompanying state in the deserialization process.
+
+Routes are the heart of our applications but by compressing them into strings and regular expressions we are throwing away valuable information that can be used in various parts of the application.
 
 #### Pure
 
@@ -97,11 +110,11 @@ When a library manages the routing side effects, you may find yourself hacking a
 
 #### Simple
 
-All this library does is handle converting a string into an array of tokens, and vice versa.  It's easy to grok, and simple to extend.
+All this library does is handle conversions between different types of data, it doesn't perform any side effects directly so it's easy to explore and test and therefore reliable to build upon.
 
 #### Composeable
 
-Because the data structures used by this library are part of the exposed API, you can compose this libraries functions with your own to create something new and interesting without having to submit a PR.
+Because the data structures used by this library are part of the exposed API, you can compose this library's functions with your own to create something new and interesting without having to submit a PR.
 
 API
 ===
@@ -137,9 +150,24 @@ The `patternString` can include the following forms.
 
 You can create more than 1 `Route` type for different sections or layers of your app.  You can define all your Routes centrally or cascade your `Route` matching in layers in a typed manner.
 
-The `Route` type will have a constructor function for each case of `Route` you specified in it's definition.  These `Route` constructor functions will `throw` if a property specified in the pattern was not passed in at initilization.
+The `Route` type will have a constructor function for each case of `Route` you specified in it's definition under the namespace `of`.  These `Route` constructor functions will `throw` if a property specified in the pattern was not passed in at initilization.
 
 To safely create a `Route` instance from a `url`, use `Route.matchOr`.
+
+```js
+
+const Route =
+    superrouter('Route', {
+        Home: '/',
+        Settings: '/settings/:section/:setting
+    })
+
+Route.of.Settings({ section: 'ci', settings: 'access' })
+// Route.of.Settings({ section: 'ci', settings: 'access' })
+
+Route.of.Settings({ missing: 1, things: 2 })
+//=> TypeError: ...
+```
 
 #### Route.fold 
 
@@ -152,33 +180,99 @@ const view =
         Post: ({ name }) => <Post postName={name} />
     })
 
-view ( Route.Post({ name: 'A Perfect API' }) )
+view ( Route.of.Post({ name: 'A Perfect API' }) )
 // => <Post postname="A Perfect API"/>
 ```
 
-Used to define functions that handle all the potential routes in your application.  This function will throw if you have missed cases, specified too many cases and other error checks.
+Used to define functions that handle all the potential routes in your application.  
 
-`Route.fold` is especially useful to map `Route` to views in your application.
+For some more advanced error checking try [static-sum-type](https://gitlab.com/JAForbes/static-sum-type/tree/master/modules/fold#fold)'s fold instead.
+
+`static-sum-type` will throw if you have missed cases or specified too many cases.
+
+`Route.fold` is especially useful to map `Route` to views in your application in a manner similar to `<Switch>` in `react-router`.
 
 #### Route.matchOr 
 
 `( (Error[]) => Route, url ) => Route`
 
-### Route.match
+```js
+const Route = type('Route', {
+    Home: '/',
+    Settings: '/settings/:settings',
+    Album: '/album/:album_id',
+    AlbumPhoto: '/album/:album_id/photo/:file_id',
+    Tag: '/tag/:tag',
+    TagList: '/tag'
+    TagFile: '/tag/:tag/photo/:file_id'
+})
 
-`string => Valid.Y( Route ) | Valid.N ( Error[] )`
+Route.matchOr( 
+    () => Route.of.Home(),
+    '/album/abc123/photo/123'
+)
+//=> Route.of.AlbumPhoto({ album_id: 'abc123', file_id: '123' })
+
+
+Route.matchOr( 
+    () => Route.of.Home(),
+    '/unknown/route'
+)
+//=> Route.of.Home()
+
+`matchOr` also passes in all the errors keyed by the case name of the routes
+to the otherwise function, so you can have custom logic that returns different default branches depending on the matching errors.
+
+Route.matchOr(
+    errs => errs.TagFile.find( x => x.case === 'ExcessPattern' )
+        ? Route.TagList()
+        : Route.Home()
+    , url
+)
+```
+
+### Route.matches
+
+`string => Valid.Y( Route[] ) | Valid.N ( StrMap( CaseName, Error[] ) )`
+
+`Route.matches` is a lower level alternative to `Route.matchOr` which either returns all the valid matching routes (if there are any) or all the errors
+that prevented matches keyed by the name of the route cases.
 
 ### Route.toURL
 
 `Route => string`
 
-### superouter.tokenizePattern
+```js
+const Route = type('Route', {
+    Home: '/',
+    Settings: '/settings/:settings',
+    Album: '/album/:album_id',
+    AlbumPhoto: '/album/:album_id/photo/:file_id',
+    Tag: '/tag/:tag',
+    TagFile: '/tag/:tag/photo/:file_id'
+})
 
-### superouter.tokenizeURL
+Route.toURL( Route.Tag({ tag: 'beach' }) )
+//=> /tag/beach
+```
 
-FAQ
-===
+### Advanced
 
-#### Why does this library support `Variadic` routes?
+#### Error Types
 
-I don't know.  I'll probably remove it.
+| Type         | Case          | When 
+|--------------|---------------|------
+| PatternToken | DuplicateDef  | When two patterns in a route defintion are effectively the same.
+| PatternToken | DuplicatePart | When two bindings within a pattern have the same name. 
+| PatternToken | VariadicPosition | When a variadic pattern is not in the final position. 
+| PatternToken | VariadicCount | When there is more than one variadic in a pattern.
+| URLToken | UnmatchedPaths | When a path segment was found but it did not match the expected value.
+| URLToken | ExcessSegment | When a URL had more segments than a pattern had expected and there was no variadic to consume the excess segments.
+| URLToken | ExcessPattern | When a URL did not have enough segments to satisfy a pattern.
+
+#### Valid
+
+This library uses a sum-type `Valid` to safely model invalid route matches.  The user friendly API traverses this type and throws on errors.  But if one 
+wants to safely analyze all the invalid patterns without using a `try {} catch(e){...}` `Valid` can be extremely useful.
+
+You'll encounter `Valid` if you interact with some more advanced functions exposed by the library including `tokenizePattern`, `tokenizeURL`, `type$safe`, or `Route.matches`.
