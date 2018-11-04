@@ -29,6 +29,19 @@
   "files": [
     "dist/*",
     "readme.md",
-    "index.js"
+    "lib/index.js"
+  ],
+  "keywords": [
+    "routing",
+    "mithril",
+    "sum-type",
+    "union-type",
+    "fp",
+    "react",
+    "react-router",
+    "router",
+    "express",
+    "minimatch",
+    "path-to-regexp"
   ]
 }
