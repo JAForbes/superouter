@@ -168,6 +168,37 @@ test('tokenizeURL', t => {
         )
     }
 
+    t.comment('extract args out of token with toArgs'); {
+
+        const toArgsAssert =
+            [
+                [URLToken.ExcessSegment('hi'), {}],
+                [URLToken.Path('wow'), {}],
+                [URLToken.Part({ key: 'a', value: 'b' }), { a: 'b' }],
+                [URLToken.Unmatched({ expected: 'this', actual: 'that' }), {}],
+                [URLToken.Variadic({ key: 'c', value: 'd' }), { c: 'd' }]
+            ]
+            .map(
+                ([a,b]) => [URLToken.toArgs([a]), b]
+            )
+            .map(
+                xs => xs.map( x => JSON.stringify(x) )
+            )
+            .filter(
+                ([a,b]) => a !== b
+            )
+            .map(
+                ([a,b]) => a+'<>'+b
+            )
+            .join('|')
+
+        t.equals(
+            toArgsAssert
+            , ''
+            , 'toArgs can extract args for applicable tokens'
+        )
+    }
+
     t.end()
 })
 
@@ -192,6 +223,12 @@ test('type', t => {
             , 'Empty pattern cannot be created with args' 
         )
 
+        t.throws(
+            () => Route.of.Home({ too: 1, many: 2 })
+            ,/Property mismatch for Route/u
+            ,'Route case constructor throws if there are errors'
+        )
+
         t.equals(
             Route.safe.Post().case
             , 'N'
@@ -214,13 +251,21 @@ test('type', t => {
 
     t.comment('Invalid Route'); {
 
-        const VRoute = type$safe('Route', {
+        const def = {
             Post: '/post/:post',
             DuplicateDef: '/post/:post',
             DuplicatePart: '/post/:a/:a',
             WeirdVar: '/...weird/:var',
             TooMany: '/...weird/...weird'
-        })
+        }
+
+        const VRoute = type$safe('Route', def)
+
+        t.throws(
+            () => type('Route', def)
+            ,/Found duplicate variable bindings/u
+            ,'Route constructor throws if patterns have errors'
+        )
 
         t.equals(VRoute.case, 'N', 'Invalid Route definitions reported')
 
@@ -331,12 +376,14 @@ test('type', t => {
             Album: '/album/:album_id',
             AlbumPhoto: '/album/:album_id/photo/:file_id',
             Tag: '/tag/:tag',
-            TagFile: '/tag/:tag/photo/:file_id'
+            TagFile: '/tag/:tag/photo/:file_id/...rest',
         })
 
         t.equals(
-            Route.toURL(Route.of.TagFile({ tag:'beach', file_id: 123 })),
-            '/tag/beach/photo/123',
+            Route.toURL(
+                Route.of.TagFile({ tag:'beach', file_id: 123, rest: 'a/b/c' })
+            ),
+            '/tag/beach/photo/123/a/b/c',
             'toURL recreates a URL that could have instantiated a route'
         )
     }
