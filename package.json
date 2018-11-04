@@ -9,7 +9,7 @@
     "test:check-coverage": "nyc check-coverage --statements 100 --branches 100 --functions 100 --lines 100",
     "test:report-coverage": "nyc report",
     "predist": "rm -fr dist && mkdir dist",
-    "dist": "browserify lib/index.js --standalone superouter | uglifyjs -mc > dist/superouter.min.js",
+    "dist": "browserify lib/index.js --standalone superouter | terser -mc > dist/superouter.min.js",
     "preversion": "npm test",
     "prepublish": "npm run dist"
   },
@@ -23,7 +23,7 @@
     "nyc": "^13.1.0",
     "tap-spec": "^5.0.0",
     "tape": "^4.9.1",
-    "uglify-js": "^3.4.9"
+    "terser": "^3.10.11"
   },
   "unpkg": "dist/superouter.min.js",
   "files": [
