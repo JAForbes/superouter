@@ -3,9 +3,7 @@ const test = require('tape')
 const { 
     tokenizePattern, 
     tokenizeURL, 
-    URLToken, 
-    PatternToken, 
-    Valid,
+    URLToken,
     type$safe,
     type
 } = require('../lib')
