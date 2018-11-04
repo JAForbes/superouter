@@ -9,10 +9,9 @@
     "test:check-coverage": "nyc check-coverage --statements 100 --branches 100 --functions 100 --lines 100",
     "test:report-coverage": "nyc report",
     "predist": "rm -fr dist && mkdir dist",
-    "dist": "npm-run-all --parallel dist:*",
-    "dist:fold": "browserify lib/index.js --standalone superouter | uglifyjs -mc > dist/superouter.min.js",
-    "release": "git push && npm version minor && npm publish",
-    "--preversion": "npm test"
+    "dist": "browserify lib/index.js --standalone superouter | uglifyjs -mc > dist/superouter.min.js",
+    "preversion": "npm test",
+    "prepublish": "npm run dist"
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
@@ -26,6 +25,7 @@
     "tape": "^4.9.1",
     "uglify-js": "^3.4.9"
   },
+  "unpkg": "dist/superouter.min.js",
   "files": [
     "dist/*",
     "readme.md",
