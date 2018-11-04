@@ -17,5 +17,5 @@ eslint:
   stage: test
   script:
     - npm install
-    - eslint .
+    - $(npm bin)/eslint .
     
