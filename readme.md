@@ -24,7 +24,7 @@ Route.of.Home()
 Route.of.Post({ post }) 
 //=> { type: 'Route', case: 'Post', value: { post }}
 Route.of.Settings({ rest: '/a/b/c' })
-// => { type: 'Route', case: 'Settings', value: 'rest' }
+// => { type: 'Route', case: 'Settings', value: { rest: '/a/b/c' } }
 
 const view = 
     Route.fold(
@@ -36,8 +36,8 @@ const view =
 
 view ( Route.of.Home() ) //=> <Home />
 
-Route.matchOr( Route.of.Home(), '/settings/1/2/3' )
-//=> Route.Settings({ rest: '1/2/3' })
+Route.matchOr( () => Route.of.Home(), '/settings/1/2/3' )
+//=> Route.of.Settings({ rest: '1/2/3' })
 
 const renderRoute = () => {
     const url = window.location.pathname
@@ -88,9 +88,9 @@ You can then take that stream of known structures and very easily connect it to 
 
 #### Data Driven
 
-This library uses a specification for it's data structures called [static-sum-type](https://gitlab.com/JAForbes/static-sum-type).  You can take the output and generate your own framework or application behaviour in a standard structured way.  You can also persist / serialize and transfer these data structures because reference equality is never relied upon.
+This library uses a specification for its data structures called [static-sum-type](https://gitlab.com/JAForbes/static-sum-type).  You can take the output and generate your own framework or application behaviour in a standard structured way.  You can also persist / serialize and transfer these data structures because reference equality is never relied upon.
 
-This means you can too fun things like have your API define its endpoints with superouter and then send type information over the wire to generate constructors for a client side SDK for better validation.
+This means you can do fun things like have your API define its endpoints with superouter and then send type information over the wire to generate constructors for a client side SDK for better validation.
 
 Or you can store route information as analytics and replay them later without losing accompanying state in the deserialization process.
 
@@ -98,7 +98,7 @@ Routes are the heart of our applications but by compressing them into strings an
 
 #### Pure
 
-This library exposes pure functions, it's up to you to connect the routing data structures to your own framework or native browser API.  That at first may sound like a chore, but it's exactly what you need when you decide you want to do some fancy hydration, ssr or custom routing transitions.
+This library exposes pure functions, it's up to you to connect the routing data structures to your own framework or native browser API.  That at first may sound like a chore, but it's exactly what you need when you decide you want to do some fancy hydration, SSR or custom routing transitions.
 
 When a library manages the routing side effects, you may find yourself hacking around the edges to do the thing you actually want to do.
 
@@ -115,14 +115,14 @@ API
 
 ### `superouter.type`
 
-`superouter.type({ [caseName]: patternString })`
+`superouter.type(typename: String, { [caseName]: patternString })`
 
 Defines a `Route` type for your application.
 
 ```js
 
 const Route = 
-    superouter.type({
+    superouter.type('Route', {
         Home: '/',
         Settings: '/settings/:page',
         Messages: '/messages/:user/:thread'
@@ -135,9 +135,9 @@ The `patternString` can include the following forms.
 |----------|-----------|--------------------------------------------|
 | Path     | `text`    | A static segment of a route path.          |
 | Part     | `:text`   | A dynamic segment of a route path          |
-| Variadic | `...text` | 1 or more dyanmic segments of a route path |
+| Variadic | `...text` | 1 or more dynamic segments of a route path |
 
-`patternString` types can not be mixed.  So `:...text` is not valid.
+`patternString` types cannot be mixed.  So `:...text` is not valid.
 
 ---
 
@@ -147,7 +147,7 @@ The `patternString` can include the following forms.
 
 You can create more than 1 `Route` type for different sections or layers of your app.  You can define all your Routes centrally or cascade your `Route` matching in layers in a typed manner.
 
-The `Route` type will have a constructor function for each case of `Route` you specified in it's definition under the namespace `of`.  These `Route` constructor functions will `throw` if a property specified in the pattern was not passed in at initilization.
+The `Route` type will have a constructor function for each case of `Route` you specified in its definition under the namespace `of`.  These `Route` constructor functions will `throw` if a property specified in the pattern was not passed in at initialization.
 
 To safely create a `Route` instance from a `url`, use `Route.matchOr`.
 
@@ -232,8 +232,8 @@ to the callback, so you can have custom logic that returns different default bra
 ```js
 Route.matchOr(
     errs => errs.TagFile.find( x => x.case === 'ExcessPattern' )
-        ? Route.TagList()
-        : Route.Home()
+        ? Route.of.TagList()
+        : Route.of.Home()
     , url
 )
 ```
@@ -263,7 +263,7 @@ const Route = type('Route', {
     TagFile: '/tag/:tag/photo/:file_id'
 })
 
-Route.toURL( Route.Tag({ tag: 'beach' }) )
+Route.toURL( Route.of.Tag({ tag: 'beach' }) )
 //=> /tag/beach
 ```
 
@@ -271,7 +271,7 @@ Route.toURL( Route.Tag({ tag: 'beach' }) )
 
 > 🚨 **Warning** 🚨
 >
-> There is absolutely no need to ever use any of the functionality below.  You can very happily and safely only use the above API.  Everything below is the primatives used to create the higher level API.  It's exposed because there's no danger in doing so, and it's documented because it's exposed.
+> There is absolutely no need to ever use any of the functionality below.  You can very happily and safely only use the above API.  Everything below is the primitives used to create the higher level API.  It's exposed because there's no danger in doing so, and it's documented because it's exposed.
 
 ---
 
