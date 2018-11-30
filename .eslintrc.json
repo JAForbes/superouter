@@ -16,7 +16,7 @@
       }
     ],
     "comma-style": ["warn", "first"],
-    "linebreak-style": ["error", "LF"],
+    "linebreak-style": ["error", "unix"],
     "quotes": ["error", "single"],
     "operator-linebreak": [
       "warn",
