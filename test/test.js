@@ -82,7 +82,7 @@ test('tokenizeURL', t => {
 
     t.comment('Valid URL'); {
     
-        const url = 'wow/such/staticPart/stuff/that/is/good'
+        const url = 'wow/such/staticPart/stuff/that/is/good/'
     
         const out = 
             tokenizeURL(
@@ -399,7 +399,7 @@ test('type', t => {
                 '/account/create'
             )
             .value.map( x => x.case ).join('|'),
-            'Create|Edit',
+            'Create|Edit|Variadic',
             'Route matches returned in order of specificity (Part/Path)'
         )
 
@@ -414,5 +414,33 @@ test('type', t => {
         )
     }
 
+    t.end()
+})
+
+
+test('trailing slahes', t => {
+    const Route = type('Route', {
+        Account: '/account/...rest'
+    })
+
+    const a = Route.matches('/account/1/')
+    const b = Route.matches('/account/1')
+    const c = Route.matches('/account')
+    const d = Route.matches('/account/')
+    const e = Route.matches('/account/1/2/3')
+
+    const allMatch =
+        [a,b,c,d,e]
+        .filter( x => x.case === 'Y' )
+        .flatMap( x => x.value )
+        .map( x => x.case )
+        .join('|')
+
+    t.equals(
+        [a,b,c,d,e].map( () => 'Account').join('|'),
+        allMatch,
+        '/...rest matches without a trailing slash'
+    )
+    
     t.end()
 })
