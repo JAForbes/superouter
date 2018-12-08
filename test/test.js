@@ -261,7 +261,7 @@ test('type', t => {
 
         t.throws(
             () => type('Route', def)
-            ,/Found duplicate variable bindings/u
+            ,/Found duplicate pattern definitions/u
             ,'Route constructor throws if patterns have errors'
         )
 
