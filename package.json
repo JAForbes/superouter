@@ -1,6 +1,6 @@
 {
   "name": "superouter",
-  "version": "0.2.1",
+  "version": "0.2.1-review",
   "description": "",
   "main": "dist/superouter.min.js",
   "module": "lib/index.js",
