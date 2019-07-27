@@ -12,7 +12,9 @@ test:
   script:
    - npm install
    - npm test
-
+  artifacts:
+      paths:
+        - coverage/
 eslint:
   stage: test
   script:
