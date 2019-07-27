@@ -28,6 +28,7 @@ pages:
   dependencies:
     - test
   script:
+    - mkdir -p public/$CI_COMMIT_REF_NAME
     - mv coverage/ "public/$CI_COMMIT_REF_NAME"
   artifacts:
     paths:
