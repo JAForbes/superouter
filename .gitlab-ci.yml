@@ -28,10 +28,8 @@ pages:
   dependencies:
     - test
   script:
-    - mv coverage/ public/
+    - mv coverage/ "public/$CI_COMMIT_SHORT_SHA"
   artifacts:
     paths:
       - public
     expire_in: 30 days
-  only:
-    - master
