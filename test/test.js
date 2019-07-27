@@ -417,6 +417,37 @@ test('type', t => {
     t.end()
 })
 
+test('Router is compatible with static-sum-type', t => {
+    const Route = type('Route', {
+      Edit: '/account/:account_id'
+      ,Create: '/account/create'
+      ,Variadic: '/account/:account_id/...rest'
+      ,Precise: '/account/:account_id/:precise'
+    })
+  
+    const instance = Route.of.Precise({ account_id: 1, precise: 2 })
+  
+    t.equals(
+        Route.of.name
+        , 'Route'
+        , 'constructor has expected name property'
+    )
+    
+    t.equals(
+      instance.type
+      , Route.of.name
+      , 'instance has a type property matching the constructor'
+    )
+  
+    t.equals(
+      instance.case
+      , 'Precise'
+      , 'instance has expected case property'
+    )
+  
+    t.end()
+})
+
 
 test('trailing slahes', t => {
     const Route = type('Route', {
