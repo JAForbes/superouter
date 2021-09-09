@@ -18,7 +18,7 @@
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
-  "repository": "git@gitlab.com:harth/superouter.git",
+  "repository": "git@github.com:JAForbes/superouter.git",
   "devDependencies": {
     "eslint": "^5.8.0",
     "npm-run-all": "^4.1.3",

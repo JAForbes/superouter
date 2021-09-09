@@ -1,9 +1,6 @@
 superouter
 ----------
 
-[![pipeline status](https://gitlab.com/harth/superouter/badges/master/pipeline.svg)](https://gitlab.com/harth/superouter/commits/master)
-[![coverage report](https://gitlab.com/harth/superouter/badges/master/coverage.svg)](https://gitlab.com/harth/superouter/commits/master)
-
 Quick Start
 ===========
 
@@ -88,7 +85,7 @@ You can then take that stream of known structures and very easily connect it to 
 
 #### Data Driven
 
-This library uses a specification for its data structures called [static-sum-type](https://gitlab.com/JAForbes/static-sum-type).  You can take the output and generate your own framework or application behaviour in a standard structured way.  You can also persist / serialize and transfer these data structures because reference equality is never relied upon.
+This library uses a specification for its data structures from [sum-type](https://github.com/JAForbes/sum-type).  You can take the output and generate your own framework or application behaviour in a standard structured way.  You can also persist / serialize and transfer these data structures because reference equality is never relied upon.
 
 This means you can do fun things like have your API define its endpoints with superouter and then send type information over the wire to generate constructors for a client side SDK for better validation.
 
@@ -185,7 +182,7 @@ view ( Route.of.Post({ name: 'A Perfect API' }) )
 
 Used to define functions that handle all the potential routes in your application.  
 
-For some more advanced error checking try [static-sum-type](https://gitlab.com/JAForbes/static-sum-type/tree/master/modules/fold#fold)'s fold instead.
+For some more advanced error checking try [sum-type](https://github.com/JAForbes/sum-type)'s fold instead.
 
 `static-sum-type` will throw if you have missed cases or specified too many cases.
 
