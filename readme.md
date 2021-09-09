@@ -1,6 +1,9 @@
 superouter
 ----------
 
+[![Next](https://github.com/JAForbes/superouter/actions/workflows/release-alpha.yml/badge.svg)](https://github.com/JAForbes/superouter/actions/workflows/release-alpha.yml)
+[![Test](https://github.com/JAForbes/superouter/actions/workflows/test.yml/badge.svg)](https://github.com/JAForbes/superouter/actions/workflows/test.yml)
+
 Quick Start
 ===========
 
