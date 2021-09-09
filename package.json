@@ -1,6 +1,6 @@
 {
   "name": "superouter",
-  "version": "0.3.2-next.20",
+  "version": "0.3.2-next.21",
   "description": "",
   "main": "dist/superouter.umd.min.js",
   "module": "lib/index.js",
