@@ -2,12 +2,13 @@
   "name": "superouter",
   "version": "0.3.2-next.20",
   "description": "",
-  "main": "dist/superouter.min.js",
+  "main": "dist/superouter.umd.min.js",
   "module": "lib/index.js",
   "type": "module",
-  "unpkg": "dist/superouter.min.js",
+  "unpkg": "dist/superouter.umd.min.js",
   "scripts": {
-    "dist": "rollup -c rollup.config.js"
+    "build": "rollup -c rollup.config.js",
+    "test": "node test/test.js"
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
