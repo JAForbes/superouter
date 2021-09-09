@@ -1,12 +1,12 @@
-const test = require('tape')
+import test from 'tape'
 
-const { 
+import { 
     tokenizePattern, 
     tokenizeURL, 
     URLToken,
     type$safe,
     type
-} = require('../lib')
+} from '../lib/index.js'
 
 test('tokenizePatterns', t => {
 
