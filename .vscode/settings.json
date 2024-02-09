@@ -1,5 +1,0 @@
-{
-  "javascript.format.enable": false,
-  "prettier.disableLanguages": ["javascript", "markdown"],
-  "eslint.autoFixOnSave": true
-}
