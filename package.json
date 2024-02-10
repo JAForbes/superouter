@@ -7,8 +7,8 @@
   "type": "module",
   "unpkg": "dist/superouter.umd.min.js",
   "scripts": {
-    "build": "rollup -c rollup.config.js",
-    "test": "node test/test.js"
+    "test": "node --import tsx --test test/*.ts",
+    "dev": "node --watch --import tsx --test test/*.ts"
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",

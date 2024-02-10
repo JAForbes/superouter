@@ -1,19 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import * as ParseUrl from "./parseUrl.js"
-
-export type Either<L, R> = 
-    | { type: 'Either', tag: 'Left', value: L } 
-    | { type: 'Either', tag: 'Right', value: R }
-
-export const Either = {
-    Left<L,R>(value: L): Either<L,R>{
-        return { type: 'Either', tag: 'Left', value }
-    },
-    Right<L,R>(value: R): Either<L, R>{
-        return { type: 'Either', tag: 'Right', value }
-    }
-}
+import { Either } from "./either.js"
+import * as ParsePath from "./parsePath.js"
 
 export type Patterns = string | string[]
 export type DefinitionResponse = [any,Patterns] | Patterns
@@ -31,23 +19,29 @@ export type MatchOptions<D extends Definition, T> = {
 export type API<N extends string, D extends Definition> = {
     definition: { [R in keyof D]: D[R] }
     patterns: { [R in keyof D]: string[] }
-    toUrl( instance: Instance<N, D, keyof D> ): string
-    toUrlSafe( instance: Instance<N, D, keyof D> ): Either<Error, string>
-    parseUrl( url: string ): Instance<N, D, keyof D>
-    parseUrlSafe( url: string ): Either<Error, Instance<N, D, keyof D>>
+    toPath( instance: Instance<N, D, keyof D> ): string
+    toPathSafe( instance: Instance<N, D, keyof D> ): Either<Error, string>
+    parsePath( url: string ): Instance<N, D, keyof D>
+    parsePathSafe( url: string ): Either<Error, Instance<N, D, keyof D>>
     match: <T>(instance: Instance<N, D, keyof D>, options: MatchOptions<D,T> ) => T
 }
 
 export type Is<R extends string> = `is${R}`
 
+export type Get<R extends string> = `get${R}`
+
 
 export type Instance<N extends string, D extends Definition, K extends keyof D> = ReturnType<Constructors<N,D>[K]>
 
-export type Superoute<N extends string, D extends Definition> = Constructors<N,D> & API<N,D> & RouteIs<N,D>
+export type Superoute<N extends string, D extends Definition> = Constructors<N,D> & API<N,D> & RouteIs<N,D> & RouteGet<N,D>
 
 
 export type RouteIs<N extends string, D extends Definition> = {
     [Key in keyof D as Is<Key extends string ? Key : never>]: (route: Instance<N, D, keyof D>) => boolean
+}
+
+export type RouteGet<N extends string, D extends Definition> = {
+    [Key in keyof D as Get<Key extends string ? Key : never>]: <T>(fallback:T, visitor: (value: Value<D[Key]>) => T, route: Instance<N, D, keyof D>) => boolean
 }
 
 function match(instance: any, options: any): any {
@@ -55,7 +49,7 @@ function match(instance: any, options: any): any {
 }
 
 export function type<N extends string, D extends Definition>(type: N, routes: D): Superoute<N,D> {
-    function toUrlSafe(route: any): Either<Error, string> {
+    function toPathSafe(route: any): Either<Error, string> {
         const errors = []
         const paths = []
         const ranks: Record<string, number> = {}
@@ -101,8 +95,8 @@ export function type<N extends string, D extends Definition>(type: N, routes: D)
         }
     }
     
-    function toURL(route: any){
-        const result = toUrlSafe(route)
+    function toPath(route: any){
+        const result = toPathSafe(route)
         if (result.tag === 'Left') {
             throw result.value
         } else {
@@ -110,13 +104,13 @@ export function type<N extends string, D extends Definition>(type: N, routes: D)
         }
     }
 
-    function parseUrlSafe( url: string ): Either<Error, any> {
+    function parsePathSafe( url: string ): Either<Error, any> {
         let bestRank = 0;
         let bestRoute: any = null;
         let error: any = null;
         for (const [tag, patterns] of Object.keys(api.patterns as string[])) {
             for( const pattern of patterns) {
-                const result = ParseUrl.safe(url,pattern)
+                const result = ParsePath.safe(url,pattern)
                 if (result.tag === 'Left') {
                     if ( error == null ) {
                         error = result
@@ -151,8 +145,8 @@ export function type<N extends string, D extends Definition>(type: N, routes: D)
         }
     }
 
-    function parseUrl(route: any): any {
-        const res = parseUrlSafe(route)
+    function parsePath(route: any): any {
+        const res = parsePathSafe(route)
         if (res.tag == 'Left') {
             throw res.value
         }
@@ -161,17 +155,35 @@ export function type<N extends string, D extends Definition>(type: N, routes: D)
     const api: any = {
         patterns: {},
         definition: routes,
-        toURL,
-        toUrlSafe,
-        parseUrl,
-        parseUrlSafe,
+        toPath,
+        toPathSafe,
+        parsePath,
+        parsePathSafe,
         match
     }
+
     for( const [tag, of] of Object.entries(routes) ) {
         api[tag] = (value={}) => ({ type, tag, value })
 
-        const [_, pattern] = of({})
-        api.patterns[tag] = ([] as string[]).concat(pattern)
+        const res = of({})
+
+        let patterns : string[] = [];
+        if (typeof res === 'string') {
+            patterns = [res]
+        } else if ( Array.isArray(res) ) {
+            if ( Array.isArray(res[1]) ) {
+                patterns = res[1]
+            } else {
+                patterns = res
+            }
+        }
+        if (patterns.length == 0) {
+            throw new Error(`Must provide at least path pattern for ${type}.${tag}`)
+        }
+        
+        api.patterns[tag] = patterns
+        api[`is${tag}`] = (v:any) => v.tag === tag
+        api[`get${tag}`] = (fallback:any, f:any, v:any) => v.tag === tag ? f(v.value) : fallback
     }
     return api as any as Superoute<N,D>
 }
