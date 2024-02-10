@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { safe } from "./match.js"
+import * as ParseUrl from "./parseUrl.js"
 
 export type Either<L, R> = 
     | { type: 'Either', tag: 'Left', value: L } 
@@ -116,7 +116,7 @@ export function type<N extends string, D extends Definition>(type: N, routes: D)
         let error: any = null;
         for (const [tag, patterns] of Object.keys(api.patterns as string[])) {
             for( const pattern of patterns) {
-                const result = safe(url,pattern)
+                const result = ParseUrl.safe(url,pattern)
                 if (result.tag === 'Left') {
                     if ( error == null ) {
                         error = result

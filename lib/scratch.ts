@@ -27,6 +27,7 @@ const Components : Components<Example> = {
     Login: LoginComp
 }
 
+let m: any;
 m.route(
     document.body
     ,'/'
