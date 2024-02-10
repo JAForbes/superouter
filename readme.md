@@ -46,11 +46,13 @@ A router that encourages you to use names and types instead of dealing with URL 
 
 ## Why
 
-I believe route state is the primary state in your application.  If we derive state from what the URL is we get deep linkable/sharable apps.  We can "cold boot" our apps and not have to click multiple times to get back to what we were doing during development.  Its a better experience for users and developers and it forces us to think about what is the total possibility space for a particular screen ahead of time.
+We believe route state is the primary state in your application.  If we derive state from what the URL is we get deep linkable/sharable apps.  We can cold boot our apps from the URL state and not have to click multiple times to get back to what we were doing during development.  Relying on a URL state as the foundation of your app state leads to a better experience for users and developers and it forces us to think about what is the total possibility space for a particular screen ahead of time.
 
 If we are going to rely on route state so much, then we should probably not do stringly checks against URL pathnames.  We should instead match on data.
 
-So superouter aims to give you a data centric experience for dealing with route state.  Superouter instances are just data, they have no instance methods, you can store them in localStorage, in your state management library, in your database - this is by design.  You can build specific niceties ontop of superouter for your framework of choice.
+So superouter aims to give you a data-centric experience for dealing with route state.  Superouter instances are just data, they have no instance methods, you can store them in localStorage, in your state management library, in your database etc - this is by design.  
+
+Superouter is deliberately small and simple.  You are encouraged to build specific niceties on top of superouter for your framework of choice.
 
 Superouter also encourages you to think of your route state as a union type.  And so the API offers affordances to match on route state and handle each case specifically with the data that is expected for that given state.  This is more reliable than adhoc ternaries and if statements that match on specific URL paths and aren't updated as your route definitions organically evolve.
 
@@ -68,8 +70,8 @@ This seems weird, but just roll with it because it provides Typescript enough in
 
 ```js
 const route = superouter.type('Example', {
-    Home: (_: { organization_id: string }) => [_,`/:organization_id`],
-    Group: (_: { organization_id: string, group_id: string }) => [_, `/:organization_id/groups/:group_id`]
+    Home: (_: { organization_id: string }) => `/:organization_id`,
+    Group: (_: { organization_id: string, group_id: string }) =>  `/:organization_id/groups/:group_id`
 })
 ```
 
@@ -109,14 +111,16 @@ We were intending on doing exactly that, thinking it would be faster and support
 
 Superouter instead has a very simple pattern language, you have literals and variables and patterns always accept extra segments.  This makes for simpler ranking system.  And I'm yet to need more power than that in route pattern matching for web apps.
 
+Finally it is also harder to get useful feedback about why something failed or didn't match when using Regular Expressions.  Superouter has a very simple single pass parser that gives the user helpful feedback when a match couldn't be made.
+
 ## Advanced / Fun
 
 ### Supporting multiple patterns per sub type
 
 ```js
 const Example = type('Example', {
-    A: (x: { a_id?: string }) => [x, [`/example/a/:a`, `/example/a`]],
-    B: (x: { b_id: string }) => [x, `/example/b/:b`]
+    A: (x: { a_id?: string }) => [`/example/a/:a`, `/example/a`],
+    B: (x: { b_id: string }) => `/example/b/:b`
 })
 ```
 
@@ -125,8 +129,6 @@ Note in the above example we are returning a list of possible patterns for `A`: 
 Because we are matching a pattern that has no bindings we make the type of `a_id` optional: `{ a_id?: string }`
 
 ### Integrating with Mithril's router
-
-
 
 A route type returns its patterns and names via `type.patterns`, it also returns the original definition you passed in as `type.definition`
 
@@ -197,7 +199,7 @@ You can optionally return the input argument as part of the tuple to silence thi
 
 ```typescript
 superouter.type('Example', {
-    A: (x: { a_id: string }) => [x, `/:a_id`]
+    A: (x: { a_id: string }) => `/:a_id`
 })
 ```
 
@@ -206,7 +208,7 @@ Alternatively you can name the var `_` and then tell ESLint to never warn about 
 ```json
 {
     "rules": {
-            "@typescript-eslint/no-unused-vars": ["error", { "varsIgnorePattern": "_", "argsIgnorePattern": "_" }]
+        "@typescript-eslint/no-unused-vars": ["error", { "varsIgnorePattern": "_", "argsIgnorePattern": "_" }]
     }
 }
 ```
