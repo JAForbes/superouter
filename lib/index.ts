@@ -1,839 +1,218 @@
-const Valid = {
-    name: 'Valid'
-    ,Y: value => ({ case: 'Y', type: 'Valid', value})
-    ,N: value => ({ case: 'N', type: 'Valid', value})
-    ,bifold: (N,Y) => o => ({
-        Y
-        ,N
-    })[o.case](o.value)
-    ,fold: ({ Y,N }) => o => ({ Y,N })[o.case](o.value)
-    ,map: f => o => ({
-        Y: x => Valid.Y(f(x))
-        ,N: () => o
-    })[o.case](o.value)
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export type Either<L, R> = 
+    | { type: 'Either', tag: 'Left', value: L } 
+    | { type: 'Either', tag: 'Right', value: R }
+
+const Either = {
+    Left<L,R>(value: L): Either<L,R>{
+        return { type: 'Either', tag: 'Left', value }
+    },
+    Right<L,R>(value: R): Either<L, R>{
+        return { type: 'Either', tag: 'Right', value }
+    }
 }
 
-const PatternToken = {
-    name: 'PatternToken'
-    ,Path: value =>
-        ({ case: 'Path', value, type: 'PatternToken' })
-    ,Part: value =>
-        ({ case: 'Part', value, type: 'PatternToken' })
-    ,Variadic: value =>
-        ({ case: 'Variadic', value, type: 'PatternToken' })
-
-    ,specificity: token => PatternToken.fold({
-        Path: () => 0b10
-        ,Part: () => 0b01
-        ,Variadic: () => 0b00
-    }) (token)
-
-    ,groupSpecificity: tokens => 
-        tokens.map(PatternToken.specificity)
-            .reduce( (p,n) => p+n, 0)
-
-    ,fold: ({
-        Path,
-        Part,
-        Variadic
-    }) => o => ({
-        Path
-        ,Part
-        ,Variadic
-    })[o.case](o.value)
-
-    ,infer: segment =>
-        segment.startsWith(':')
-            ? PatternToken.Part(segment.slice(1))
-        : segment.startsWith('...')
-            ? PatternToken.Variadic(segment.split('...')[1])
-        : PatternToken.Path(segment)
-
-    ,groupValidations: {
-        duplicateDef: allTokensPairs => {
-
-            // Pair (CaseName, PatternStr)
-            const patterns = 
-                allTokensPairs.map(
-                    ([k,v]) => [k, PatternToken.toPattern(v)]
-                )
-            
-            // StrMap (PatternStr, CaseName[])
-            const patternStrDupeSearch =
-                patterns.reduce(
-                    (p,[caseName,pattern]) => {
-                        p[pattern] = p[pattern] || []
-                        p[pattern].push(caseName)
-    
-                        return p
-                    }
-                    , {}
-                )
-    
-            // StrMap (CaseName, DupeMetaData)
-            // where 
-            // DupeMetaData = 
-            //  { caseNames::CaseName[], patternStr::PatternStr }
-            const caseDupes = 
-                Object.entries(patternStrDupeSearch)
-                    .reduce(
-                        (p, [patternStr, caseNames]) => {
-
-                            if( caseNames.length > 1 ){
-                                caseNames.forEach(
-                                    (caseName) => {
-                                        p[caseName] = {
-                                            caseNames, patternStr
-                                        }
-                                    }
-                                )
-                            }
-                            return p
-                        }
-                        ,{}
-                    )
-
-            if ( Object.keys(caseDupes).length ){
-                return Valid.N(
-                    // StrMap (CaseName, PatternToken.Error )
-                    Object.entries(caseDupes)
-                        .map(
-                            ([caseName, { caseNames, patternStr }]) => 
-                                [ caseName
-                                , PatternToken.Error.DuplicateDef({
-                                    caseNames, patternStr
-                                })
-                                ]
-                        )
-                )
-            } else {
-                return Valid.Y(
-                    allTokensPairs
-                )
-            }
-        }
+type Patterns = string | string[]
+type DefinitionResponse = [any,Patterns] | Patterns
+type Definition = Record<string, (v: any) => DefinitionResponse>
+type Constructors<N extends string, D extends Definition> = {
+    [R in keyof D]: {
+        (value: Parameters<D[R]>[0]): { type: N, tag: R, value: Parameters<D[R]>[0] }
     }
-
-    ,singleValidations: {
-        variadicPosition: tokens => {
-            const index =
-                tokens.findIndex(PatternToken.isVariadic)
-
-            if (index > -1 && index != tokens.length - 1) {
-                return Valid.N(
-                    PatternToken.Error.VariadicPosition({ 
-                        tokens, index 
-                    })
-                )
-            } else {
-                return Valid.Y(tokens)
-            }
-        }
-
-        ,variadicCount: tokens => {
-            const variadics =
-                tokens.filter(PatternToken.isVariadic)
-
-            if (variadics.length > 1) {
-                return Valid.N(
-                    PatternToken.Error.VariadicCount({
-                        variadics, tokens
-                    })
-                )
-            } else {
-                return Valid.Y(tokens)
-            }
-        }
-
-        ,duplicatePart: tokens => {
-            
-            const dupeParts =
-                [
-                    tokens.flatMap(
-                        PatternToken.fold({
-                            Path: () => []
-                            ,Part: x => [x] 
-                            ,Variadic: x => [x]
-                        })
-                    )
-                    .reduce(
-                        (p,n) => {
-                            p[n] = p[n] || 0
-                            p[n] = p[n] + 1
-                            return p
-                        }
-                        ,{}
-                    )
-                ]
-                .flatMap( 
-                    o => Object.entries(o)
-                        .flatMap( ([k,v]) => v > 1 ? [k] : [])
-                )
-
-            if (dupeParts.length) {
-                return Valid.N(
-                    PatternToken.Error.DuplicatePart({
-                        dupeParts
-                    })
-                )
-            } else {
-                return Valid.Y(tokens)
-            }
-        }
+}
+type MatchOptions<N extends string, D extends Definition, T> = {
+    [R in keyof D]: {
+        (value: Parameters<D[R]>[0]): T
     }
-
-    ,Error: {
-        name: 'PatternToken.Error'
-        ,VariadicPosition({ tokens, index }){
-            return {
-                type: 'PatternToken.Error'
-                ,case: 'VariadicPosition'
-                ,value: new TypeError(
-                    'Variadic ' + JSON.stringify(
-                        PatternToken.toString(tokens[index])
-                    )
-                    + ' found at position ' + index + ' of ' + tokens.length 
-                    + ' of pattern ' + JSON.stringify(
-                        PatternToken.toPattern(tokens)
-                    ) + '.  ' 
-                    + 'Variadics can only be in the final position.'
-                )
-            }
-        }
-
-        ,VariadicCount({ variadics, tokens }){
-            return {
-                type: 'PatternToken.Error'
-                ,case: 'VariadicCount'
-                ,value: new TypeError(
-                    'Found ' + variadics.length + ' variadics in pattern '
-                    + PatternToken.toPattern(tokens) + '.  '
-                    + 'A maxiumum of 1 variadic is allowed.'
-                )
-            }
-        }
-
-        ,DuplicateDef({ caseNames, patternStr }){
-            return {
-                type: 'PatternToken.Error'
-                ,case: 'DuplicateDef'
-                ,value: new TypeError(
-                    'Found duplicate pattern definitions for '
-                    + 'routes: '+caseNames.join(', ')+'.  '
-                    + 'They all have equivalent pattern strings: '
-                    + patternStr + '.  '
-                    + 'Duplicated patterns lead to ambiguous matches.'
-                )
-            }
-        }
-
-        ,DuplicatePart({ dupeParts }){
-            return {
-                type: 'PatternToken.Error'
-                ,case: 'DuplicatePart'
-                ,value: new TypeError(
-                    'Found duplicate variable bindings: '
-                    + dupeParts.join(', ')
-                    + '.  Duplicated names lead to ambiguous bindings.'
-                )
-            }
-        }
-        
-    }
-
-    ,isVariadic: o => o.case === 'Variadic'
-
-    ,validate(tokens){
-        const out =
-            Object.values(PatternToken.singleValidations).map(
-                f => f(tokens)
-            )
-
-        const invalids = out.filter( x => x.case === 'N')
-            .map( x => x.value )
-
-        return invalids.length > 0
-            ? Valid.N(invalids)
-            : Valid.Y(tokens)
-    }
-
-    ,validateGroup(allTokensGroup){
-
-        const validTokensGroup = 
-            allTokensGroup.filter( ([,v]) => v.case === 'Y' )
-            
-        const out =
-            Object.values(PatternToken.groupValidations)
-            .map(
-                f => f( validTokensGroup.map( ([k,v]) => [k, v.value] ) )
-            )
-
-        const invalids = out.filter( x => x.case === 'N')
-            .map( x => x.value )
-
-        return invalids.length > 0
-            ? Valid.N(invalids)
-            : Valid.Y(allTokensGroup)
-    }
-
-
-    ,toString: x => ({
-        Path: x => x
-        ,Part: x => ':'+x
-        ,Variadic: x => '...'+x
-    })[x.case](x.value)
-
-    ,toPattern: xs => xs.map( PatternToken.toString ).join('/')
+}
+type API<N extends string, D extends Definition> = {
+    definition: { [R in keyof D]: D[R] }
+    patterns: { [R in keyof D]: string[] }
+    toURL( instance: Instance<N, D, keyof D> ): string
+    toURLSafe( instance: Instance<N, D, keyof D> ): Either<Error, string>
+    parseURL( url: string ): Instance<N, D, keyof D>
+    parseURLSafe( url: string ): Either<Error, Instance<N, D, keyof D>>
+    match: <T>( options: MatchOptions<N,D,T> ) => (instance: Instance<N, D, keyof D> ) => T
 }
 
-const URLToken = {
-    Path: value =>
-        ({ case: 'Path', value, type: 'URLToken' })
-    ,Part: ({ key, value }) =>
-        ({ case: 'Part', value: { key, value }, type: 'URLToken' })
-    ,Variadic: ({ key, value }) =>
-        ({ case: 'Variadic', value: { key, value }, type: 'URLToken' })
-    ,Unmatched: ({expected, actual}) =>
-        ({ case: 'Unmatched', value: { expected, actual }, type: 'URLToken' })
-    ,ExcessSegment: segment =>
-        ({ case: 'ExcessSegment', value: segment, type: 'URLToken' })
+type Is<R extends string> = `is${R}`
 
-    ,fold: ({
-        Path,Part,Variadic,Unmatched,ExcessSegment 
-    }) => x => ({
-        Path,Part,Variadic,Unmatched,ExcessSegment
-    })[x.case](x.value)
 
-    ,toString: x => URLToken.fold({
-        Path: x => x
-        ,Part: ({ value: x }) => x
-        ,Variadic: ({ value: x }) => x
-        ,Unmatched: ({ actual: x }) => x
-        ,ExcessSegment: x => x
-    }) (x)
+type Instance<N extends string, D extends Definition, K extends keyof D> = ReturnType<Constructors<N,D>[K]>
 
-    ,toURL: xs => xs.map( URLToken.toString ).join('/')
+type Superoute<N extends string, D extends Definition> = Constructors<N,D> & API<N,D> & RouteIs<N,D>
 
-    ,toArgs: xs => xs.reduce(
-        (p,n) => URLToken.fold({
-            ExcessSegment: () => p
-            ,Part: ({ key, value }) => 
-                Object.assign(p, { [key]: value })
-            ,Path: () => p
-            ,Unmatched: () => p
-            ,Variadic: ({ key, value }) => 
-                Object.assign(p, { [key]: value })
-        }) (n),
-        {}
-    )
 
-    ,fromPattern: o => segment => PatternToken.fold({
-        Path: expected =>
-            segment === expected 
-                ? URLToken.Path(segment)
-                : URLToken.Unmatched({ expected, actual: segment })
-        ,Part: key =>
-            URLToken.Part({ key, value: segment })
-        ,Variadic: key =>
-            URLToken.Variadic({ key, value: segment })
-    }) (o)
+type RouteIs<N extends string, D extends Definition> = {
+    [Key in keyof D as Is<Key extends string ? Key : never>]: (route: Instance<N, D, keyof D>) => boolean
+}
 
-    ,isVariadic: o => o.case === 'Variadic'
+function doesPathMatchPattern(path: string, pattern: string) : boolean {
+    let done = false
+    let i = 0;
 
-    ,validations: {
+    type Mode = 'investigating'| 'expecting-literal' | 'expecting-variable' | 'accepting-remainder';
+    let mode: Mode;
+    
+    // parse the first segment of the pattern until we hit a `/` or the end of the string
+    // if it a literal, change mode to expecting literal, and start iterating through path, if any character doesn't match, exit early (false)
+    // if everything matches, and you reach a `/` start the same process again
+    // if the next segment is a variable, just store all the characters until you hit the next segment
+    // if you reach the end of the path | pattern without failing on a literal, its a match
+    // we could optionally return a score (number of matches weighted to longer/more complex strings?) but we can know the complexity at definition time
+    // so if its a match the complexity should be that const number.
+    
+    let patternIndex = 0;
+    let pathIndex = 0;
+    mode = 'investigating'
+
+    // we add an extra terminator so every if/else
+    // only checks for that delimiter, instead of the delimiter + end of string
+    path = path + '/'
+    pattern = pattern + '/'
+
+    let vars : Record<string,string> = {}
+    while ( !done ) {
         
-        excessPatterns: patternTokens => urlTokens => {
-
-            const numSegments = 
-                urlTokens.length
-
-            const numPatterns =
-                patternTokens.length
-                
-            const excessPatterns = 
-                numPatterns > numSegments
-                ? patternTokens.slice(numSegments)
-                : []
-
-            if( excessPatterns.length ){
-                return Valid.N(
-                    URLToken.Error.ExcessPattern({
-                        urlTokens, patternTokens
-                        ,excessPatterns
-                    })
-                )
-            } else {
-                return Valid.Y(urlTokens)
-            }
+        if (mode != 'accepting-remainder' && (path[pathIndex] == null || pattern[patternIndex] == null)) {
+            // todo-james return what was expected
+            return false;
         }
 
-        ,excessSegments: patternTokens => urlTokens => {
-            const extraSegments = 
-                urlTokens.filter( x => x.case === 'ExcessSegment' )
-                
-            if ( extraSegments.length 
-                && patternTokens.slice(-1)[0].case !== 'Variadic' 
-            ){
-                return Valid.N(
-                    URLToken.Error.ExcessSegment({
-                        patternTokens, extraSegments
-                    })
-                )
-            } else {
-                return Valid.Y(urlTokens)
-            }
+        // just skips repeated forward slashes
+        // we treat /a/b/////c as the same as /a/b/c as its usually a bug
+        // in the users code or a user doing something strange
+        let wasNewPatternSegment = false;
+        let wasNewPathSegment = false;
+        while (pattern[patternIndex] === '/') {
+            wasNewPatternSegment = true;
+            patternIndex++
         }
 
-        ,unmatchedPaths: patternTokens => urlTokens => {
-            const unmatched =
-                urlTokens.filter( x => x.case === 'Unmatched' )
-
-            if( unmatched.length ){
-                return Valid.N(
-                    URLToken.Error.UnmatchedPaths({ patternTokens, urlTokens })
-                )
-            } else {
-                return Valid.Y(urlTokens)
-            }
-        }
-        
-    }
-
-    ,Error: {
-        UnmatchedPaths({ patternTokens, urlTokens }){
-            return {
-                type: 'URLToken.Error'
-                ,case: 'UnmatchedPaths'
-                ,value:
-                    new TypeError(
-                        'Pattern '+PatternToken.toPattern(patternTokens)
-                            + ' could not match URL '
-                            + URLToken.toURL(urlTokens)
-                            + ' due to unmatched path segments: '
-                            + urlTokens.map(
-                
-                                x => x.case === 'Unmatched'
-                                    ? URLToken.toString(x)
-                                    : '...'
-                            )
-                            .join('/')
-                    )
-            }
+        while (path[pathIndex] === '/') {
+            wasNewPathSegment = true;
+            pathIndex++
         }
 
-        ,ExcessSegment({ patternTokens, extraSegments }){
-            return {
-                type: 'URLToken.Error'
-                ,case: 'ExcessSegment'
-                ,value: new TypeError(
-                    'Excess tokens ('
-                        + JSON.stringify(
-                            '/'+extraSegments.map( x => x.value).join('/')
-                        )
-                        + ')'
-                    + ' were found and the URLPattern:'
-                        + JSON.stringify(
-                            PatternToken.toPattern(patternTokens)
-                        )
-                          
-                    + ' did not contain a variadic for the additional'
-                    + ' values.'
-                )
+        switch (mode) {
+            case 'investigating': {
+
+                if ( wasNewPatternSegment && pattern[patternIndex] == ':') {
+                    mode = 'expecting-variable'
+                } else if ( wasNewPatternSegment ) {
+                    mode = 'expecting-literal'
+                } else if 
+                mode = 'accepting-remainder'
+                console.log('hi')
+                break;
             }
-        }
-
-        ,ExcessPattern({ urlTokens, excessPatterns, patternTokens }){
-            return {
-                type: 'URLToken.Error'
-                ,case: 'ExcessPattern'
-                ,value: new TypeError(
-                    'The URL '+ URLToken.toURL(urlTokens) 
-                    +' had excess patterns ('
-                        + PatternToken.toPattern(excessPatterns)
-                    + ')'
-                    + ' when parsed as part of pattern:'
-                        + ' ' +PatternToken.toPattern(patternTokens)
-                )
-            }
-        }
-    }
-
-    ,transforms: {
-        collectVariadics: url => patternTokens => urlTokens => {
-
-            const extraSegments = 
-                urlTokens.length > patternTokens.length 
-                    ? urlTokens.slice( patternTokens.length )
-                    : []
-
-            if ( extraSegments.length ){
-                
-                const index =
-                    urlTokens.findIndex(URLToken.isVariadic)
-
-                // Technically not possible because excess segments
-                // without variadics isn't valid and would be caught
-                // earlier.  But typesafety 😐
-                /* istanbul ignore next */
-                if (index == -1) {
-                    return urlTokens
-                } else {
-                    const { key, value } = urlTokens[index].value
-                    
-                    return urlTokens.slice(0, patternTokens.length-1).concat(
-                        URLToken.Variadic(
-                            {
-                                key
-                                , value: value
-                                    + '/'
-                                    + url.split('/')
-                                        .slice(patternTokens.length)
-                                        .join('/')
-                            }
-                        )
-                    )
+            case 'expecting-variable': {
+                let varName = ''
+                let varValue = ''
+                while (pattern[patternIndex] !== '/') {
+                    patternIndex++
+                    varName += pattern[patternIndex]
                 }
-            } else {
-                return urlTokens
-            }
-        }
-    }
-
-    ,transform: (url, urlTokens, patternTokens) => {
-        return Object.values(URLToken.transforms).reduce(
-            (p, f) => f (url) (patternTokens) (p),
-            urlTokens
-        )
-    }
-
-    ,validate(patternTokens, urlTokens){
-        const out =
-            Object.values(URLToken.validations).map(
-                f => f(patternTokens) (urlTokens)
-            )
-
-        const invalids = out.filter( x => x.case === 'N')
-            .map( x => x.value )
-
-        return invalids.length > 0
-            ? Valid.N(invalids)
-            : Valid.Y(urlTokens)
-    }
-}
-
-function tokenizePattern(pattern) {
-
-    const patternTokens =
-        pattern.split('/').map(PatternToken.infer)
-
-    return [patternTokens]
-            .map(PatternToken.validate)
-            .shift()
-}
-
-// always include a trailing slash internally
-// so final ...rest matches optionally
-// see: https://gitlab.com/harth/superouter/issues/4
-const trailingIfFinalIsVariadic = (patternTokens, url) => {
-    const lastTokenIsRest = 
-        patternTokens.slice(-1)
-        .map(
-            PatternToken.isVariadic
-        )
-        .shift()
-    
-    const isTrailing = 
-        url[url.length -1] == '/'
-
-    return lastTokenIsRest && !isTrailing
-            ? url + '/'
-            : url
-}
-
-
-function tokenizeURL(patternTokens, theirURL){
-    const url = trailingIfFinalIsVariadic(patternTokens, theirURL)
-        
-    const urlTokens =
-        url.split('/').slice(0, patternTokens.length).map(
-            (segment, i) => 
-                URLToken.fromPattern (patternTokens[i]) (segment)
-        )
-
-    const segments =
-        url.split('/')
-    
-    const numSegments = 
-        segments.length
-
-    const numPatterns =
-        patternTokens.length
-        
-    const excessSegments = 
-        numSegments > numPatterns
-        ? segments.slice(numPatterns).map(
-            URLToken.ExcessSegment
-        )
-        : []
-     
-    const completeTokens =
-        urlTokens
-        .concat(excessSegments)
-
-    
-    return [URLToken.validate(patternTokens, completeTokens)]
-        .map(
-            Valid.map(
-                () => URLToken.transform(url, completeTokens, patternTokens)
-            )
-        )
-        .shift()
-}
-
-function routeValidator({ tokenized }){
-    
-    const groupInvalids = 
-        [
-            PatternToken.validateGroup(
-                Object.entries(tokenized)
-            )
-        ]
-        .flatMap(
-            Valid.bifold(
-                x => x, () => []
-            )
-        )
-
-    // Pair (CaseName, PatternToken.Error[])
-    const invalids =
-        Object.entries(tokenized).filter(
-            ([, tokens]) => tokens.case === 'N'
-        )
-        .map( ([key, x]) => [key, x.value] )
-        .concat(groupInvalids.reduce( (p,n) => p.concat(n), []))
-
-    if( invalids.length ){
-        return Valid.N(
-            Object.entries(tokenized)
-            .map(([k]) => [k, []])
-            .concat( invalids )
-            .reduce( (p,[k,v]) => {
-                p[k] = p[k] || []
-                p[k] = p[k].concat(v) 
-                return p
-            }, {})
-                
-        )
-    } else {
-        return Valid.Y(tokenized)
-    }
-}
-
-function SafeRouteType({ typeName, tokenized }){
-    
-    return Object.entries(tokenized).map(
-        ([caseName, tokens]) => {
-            const keys = 
-                tokens.value.reduce(
-                    (p, n) => 
-                        PatternToken.fold({
-                            Path: () => p
-                            ,Part: key => p.concat(key)
-                            ,Variadic: key => p.concat(key)
-                        }) (n),
-                    []
-                )
-                .sort()
-
-            function of(o) {
-
-                const foundKeys = Object.keys(o || {}).sort()
-                
-                if( foundKeys.join('|') !== keys.join('|') ){
-                    return Valid.N( 
-                        new TypeError(
-                            'Property mismatch for '
-                                +typeName+'.'+caseName
-                                + '.  Expected: {'+keys.join(',')+'}'
-                                + ' but found: {'+foundKeys.join()+'}'
-                        )
-                    )
-                } else {
-                    return Valid.Y(
-                        {
-                            type: typeName
-                            ,case: caseName
-                            ,value: o
-                        }
-                    )
+                while (path[pathIndex] !== '/') {
+                    pathIndex++
+                    varValue += path[pathIndex]
                 }
+                vars[varName] = varValue
             }
-
-            return { [caseName]: of }
-        }
-    )
-    .reduce( (p,n) => Object.assign(p,n))
-}
-
-function RouteType({ typeName, safeRouteType }){
-
-    const Route =
-        Object.entries(safeRouteType).map(
-            ([key, of]) => ({ 
-                [key]: o => Valid.fold({
-                    Y: x => x
-                    ,N(err){
-                        throw err
-                    }
-                }) ( of(o) )
-                
-            })
-        )
-        .reduce( (p,n) => Object.assign(p,n), { name: typeName })
-
-    return Route
-}
-
-const PatternMatches = 
-    ({ tokenized, url }) => {
-
-        const pairs = 
-            Object.entries(tokenized).map(
-                ([key, patternTokens]) => 
-                    [key, tokenizeURL(patternTokens.value, url)]
-            )
-
-        const invalid = 
-            pairs
-            .filter( ([,valid]) => valid.case === 'N' )
-            .map(
-                ([key, { value }]) => ({ [key]: value})
-            )
-            .reduce( (p,n) => Object.assign(p,n), {})
-
-        const valid = 
-            pairs
-            .filter( ([,valid]) => valid.case === 'Y' )
-            .sort(
-                ([,{ value: a}], [,{ value: b}]) => 
-                    PatternToken.groupSpecificity(b) 
-                    - PatternToken.groupSpecificity(a)
-            )
-            
-        if( valid.length ) {
-            return Valid.Y(valid)
-        } else {
-            return Valid.N(invalid)
-        }
-    }
-
-const Matches = 
-    ({ routeType }) => patternMatches => {
-
-        return Valid.bifold(
-            Valid.N,
-            xs => 
-                // xs being non empty is technically a precondition
-                // to being marked as valid
-                // but we check it in any case as the types make it possible
-                xs.length == 0
-                /* istanbul ignore next */
-                ? Valid.N({})
-                : Valid.Y(
-                    xs.map(
-                        ([caseName, { value }]) => 
-                            routeType[caseName](
-                                URLToken.toArgs(value)
-                            )
-                    )
-                )
-        ) (patternMatches)
-    }
-
-function type$safe(typeName, cases){
-    // StrMap (CaseName, Valid( N::PatternToken.Error[] | Y::PatternToken[] ) )
-    const tokenized = 
-        Object.entries(cases).map(
-            ([caseName, pattern]) => {
-                return { [caseName]: tokenizePattern(pattern) }
+            case 'expecting-literal': {
+                let literalExpected = ''
+                let literalFound = ''
+                while (pattern[patternIndex] !== '/') {
+                    patternIndex++
+                    varName += pattern[patternIndex]
+                }
+                while (path[pathIndex] !== '/') {
+                    pathIndex++
+                    varValue += path[pathIndex]
+                }
+                vars[varName] = varValue
             }
-        )
-        .reduce( (p,n) => Object.assign(p, n), {} )
+            case 'parsing-pattern-segment': {
 
-    const validated = routeValidator({ tokenized })
-
-    if( validated.case === 'N' ){
-        return validated
-    } else {
-
-        const safeRouteType =
-            SafeRouteType({ typeName, tokenized })
-        
-        const routeType = 
-            RouteType({ typeName, safeRouteType })
-
-        const fold = cases => o => cases[o.case](o.value)
-
-        const matches = url => {
-            const patternMatches = PatternMatches({tokenized, url})    
-            return Matches({ routeType }) (patternMatches)
-        }
-
-        const matchOr = (otherwise, url) => 
-            [url]
-            .map(matches)
-            .flatMap(
-                Valid.bifold(
-                    otherwise,
-                    x => x
-                )
-            )
-            .slice(0,1)
-            .concat( otherwise({}) )
-            .shift()
-
-        const toURL = routeCase => {
-            return tokenized[routeCase.case].value.map(
-                PatternToken.fold({
-                    Part: key => routeCase.value[key]
-                    ,Path: key => key
-                    ,Variadic: key => routeCase.value[key]
-                })
-            )
-            .join('/')
-        }
-
-        return Valid.Y(
-            { safe: safeRouteType
-            , of: routeType
-            , fold
-            , matches
-            , matchOr
-            , toURL
+                console.log('2')
             }
-        )
+            break;
+        }
+        pattern[i]
     }
 }
 
-const type = 
-    (typename, cases) => 
-        Valid.bifold(
-            (errs) => {
-                throw Object.values(errs)
-                    .flatMap( xs =>  xs )
-                    .map( x => x.value)
-                    .shift()
-            },
-            x => x
-        ) (type$safe(typename, cases))
+export function parseURLSafe<N extends string, D extends Definition, K extends keyof D>( type: API<N, D>, url: string ): Either<Error, Instance<N, D, K>> {
 
-
-export { 
-    tokenizePattern
-    , tokenizeURL
-    , PatternToken
-    , URLToken
-    , Valid
-    , type$safe
-    , type
+    let winner : K | null = null;
+    for( let x of Object.entries(type.regex) ) {
+        x
+    }
+    return Either.Left( new Error('Hello'))
 }
+
+export function type<N extends string, D extends Definition>(type: N, routes: D): Superoute<N,D> {
+    const api: any = {
+        patterns: {},
+        regex: {}
+    }
+    for( const [tag, of] of Object.entries(routes) ) {
+        api[tag] = (value={}) => ({ type, tag, value })
+
+        const [_, pattern] = of({})
+        api.patterns[tag] = pattern
+        api.regex[tag] = re.pathToRegexp(pattern)
+        api.complexity[tag] = pattern.split('/').map( x => x.startsWith(':') ? 2 : 1 )
+    }
+    return null as any as Superoute<N,D>
+}
+
+type Value< I extends (v:any) => any> = Parameters<I>[0]
+
+
+const Example = type('Example', {
+    Welcome: (_: { name?: string }) => [`/welcome/:name`, `/welcome`],
+    Login: (_: { error?: string }) => [`/login/error/:error`, `/login`]
+})
+
+type Example = typeof Example["definition"]
+
+
+// Rough type definition of mithril component
+type Component<T> = (v: { attrs: T}) => ({ view: (v: { attrs: T }) => any })
+
+const WelcomeComp: Component< Value<Example["Welcome"]> > = () => ({ view: (v) => `Welcome ${v.attrs.name ?? 'User'}`})
+const LoginComp: Component< Value<Example["Login"]> > = () => ({ view: (v) => [
+    v.attrs.error ? 'There was an error: ' + v.attrs.error : null,
+    'Please login using your username and password.'
+]})
+
+type Components<D extends Definition> = {
+    [K in keyof D]: Component< Parameters<D[K]>[0] >
+}
+
+const Components : Components<Example> = {
+    Welcome: WelcomeComp,
+    Login: LoginComp
+}
+
+m.route(
+    document.body
+    ,'/'
+    , Object.fromEntries(Object.entries(Example.patterns).flatMap( ([k,v]) => v.map( v2 => [v2, k]) )) 
+)
+
+// const AComp : Component<typeof Example.A> = () => ({ view: () => null })
+
+
+// const Component : Components<Example["definition"]> = {
+//     A: Comp
+// }
+
+// const a = Example.A({ a_id: 'hello' })
+
+// const fn = Example.match({
+//     A: ({a_id}) => 1,
+//     B: ({ b_id }) => 2
+// })

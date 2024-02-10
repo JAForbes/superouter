@@ -46,7 +46,7 @@ A router that encourages you to use names and types instead of dealing with URL 
 
 ## Why
 
-We believe route state is the primary state in your application.  If we derive state from what the URL is we get deep linkable/sharable apps.  We can cold boot our apps from the URL state and not have to click multiple times to get back to what we were doing during development.  Relying on a URL state as the foundation of your app state leads to a better experience for users and developers and it forces us to think about what is the total possibility space for a particular screen ahead of time.
+Route state is the primary state in your application.  If we derive state from what the URL is we get deep linkable/sharable apps.  We can cold boot our apps from the URL state and not have to click multiple times to get back to what we were doing during development.  Relying on a URL state as the foundation of your app state leads to a better experience for users and developers and it forces us to think about what is the total possibility space for a particular screen ahead of time.
 
 If we are going to rely on route state so much, then we should probably not do stringly checks against URL pathnames.  We should instead match on data.
 
