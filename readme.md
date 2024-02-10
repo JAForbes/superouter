@@ -107,11 +107,11 @@ Returns the definition object you passed in when initialized the type.  This is 
 
 ### Why didn't you use `path-to-regexp` (et al) to parse the route patterns?
 
-We were intending on doing exactly that, thinking it would be faster and support more features.  But then we thought how would we rank matches when it supports all these features, it becomes difficult to determine.
+We were intending on doing exactly that, thinking it would be faster and support more features.  But given `path-to-regexp` supports so many features, it would be difficult to determine the pattern match rank for all the variations.
 
-Superouter instead has a very simple pattern language, you have literals and variables and patterns always accept extra segments.  This makes for simpler ranking system.  And I'm yet to need more power than that in route pattern matching for web apps.
+Superouter instead has a very simple pattern language: you have literals and variables and patterns always accept extra segments.  This makes for simpler ranking system.  We're yet to need more power than that in route pattern matching for web apps.
 
-Finally it is also harder to get useful feedback about why something failed or didn't match when using Regular Expressions.  Superouter has a very simple single pass parser that gives the user helpful feedback when a match couldn't be made.
+Finally it is also harder to get useful feedback about why something failed or didn't match when using Regular Expressions.  Superouter has a very simple single pass parser that gives the user helpful feedback when a match couldn't be made.  With regexp when something doesn't match you don't get a lot of insight into what you did wrong.
 
 ## Advanced / Fun
 
@@ -126,7 +126,7 @@ const Example = type('Example', {
 
 Note in the above example we are returning a list of possible patterns for `A`: [`/example/a/:a`, `/example/a`].  This means if we hit `/example/a` and there is no binding for `/:a` we still get a match and superouter will return a value object of `{}`
 
-Because we are matching a pattern that has no bindings we make the type of `a_id` optional: `{ a_id?: string }`
+Because we are matching a pattern that has no bindings we make the type of `a_id` optional: `{ a_id?: string }`.  Unfortunately we can't enforce this kind of relationship within typescript so you'll have to be diligent when defining your route defintions to keep your types and your patterns in sync.
 
 ### Integrating with Mithril's router
 
