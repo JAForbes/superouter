@@ -88,7 +88,7 @@ const route = superouter.type("Example", {
 });
 ```
 
-In the above example, typescript now knows `route.Group` can only be constructed with both an `organization_id` and a `group_id` whereas `Route.Home` only needs an `organization_id`. We also generate helper methods, and typescript knows this dynamic methods exist e.g. `isGroup` or `isHome`.
+In the above example, typescript now knows `route.Group` can only be constructed with both an `organization_id` and a `group_id` whereas `Route.Home` only needs an `organization_id`. We also generate helper methods, and typescript knows these dynamic methods exist e.g. `isGroup` or `isHome`.
 
 > 🤓 We call `Example` our supertype, and `Example.Group` and `Example.Home` our subtypes.
 
