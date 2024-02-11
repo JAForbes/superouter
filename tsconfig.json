@@ -8,5 +8,5 @@
     "outDir": "./dist",
     "allowSyntheticDefaultImports": true
   },
-  "include": ["lib/**.ts", "test/scratch.ts"],
+  "include": ["lib/**.ts"],
 }
