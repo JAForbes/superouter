@@ -13,7 +13,7 @@
     "build:types": "npx tsc",
     "build:clear": "rm -fr ./dist",
     "build": "npm run build:clear && npm run build:bundle && npm run build:types",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm version prerelease --preid=next && npm run build"
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
