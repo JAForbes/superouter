@@ -151,7 +151,7 @@ f(Example.C({}));
 //=> 0
 ```
 
-Convert a route type into another type by matching on every value. In the avove example we're converting all routes to a `number`.
+Convert a route type into another type by matching on every value. In the above example we're converting all routes to a `number`.
 
 `.match` is a discriminated union, which means you are forced to handle every case, if a case is missing, it won't typecheck.
 
@@ -163,7 +163,8 @@ Convert a route type into another type by matching on every value. In the avove 
 // Create a function that handles cases B and C
 const _ = Example.otherwise(["B", "C"]);
 
-//
+// B and C are handled by _(...), so we only need to specify A
+// typescript will complain if you haven't handled all the cases
 const g = (r: Instance) =>
   Example.match(r, {
     A: () => 1,
@@ -194,7 +195,7 @@ Example.toPath(Example.A({ a_id: "cool" }));
 
 Example.toPath(Example.A({ a_id: "" }));
 //=> throw new Error(
-//     'Expected binding for path variable ':a_id' but instead found nothing'
+//     'Expected binding for path literal ':a_id' but instead found nothing'
 //   )
 ```
 
@@ -204,7 +205,7 @@ If it cannot satisfy the patterns you specified with the values available on the
 
 This may happen if your types are out of sync with your patterns.
 
-> Note any excess path segments will appear on `.value.rest`
+> Note any excess path segments on `value.rest` will be appended to the resulting path and normalized
 
 ### `type.fromPath`
 
@@ -214,9 +215,12 @@ Example.fromPath("/a/cool");
 
 Example.fromPath("/incorrect/non/matching/path");
 //=> throw new Error(
-//      'Expected binding for path variable ':a_id' but instead found nothing'
+//      `Expected binding for path literal '/a' but instead found '/incorrect'`
 //   )
 ```
+
+> Note any excess path segments will appear on `.value.rest`
+
 
 ### `type.toPathSafe`
 
@@ -248,7 +252,7 @@ If `Either` is an unfamiliar data structure, I recommend having a read of [The P
 
 > To extract the value from the either instance, simply check the `tag` and then conditionally access `.value` to get either the path or the error.
 
-> Note any excess path segments will appear on `.value.rest`
+> Note any excess path segments on `value.rest` will be appended to the resulting path and normalized
 
 ### `type.fromPathSafe`
 
@@ -261,7 +265,7 @@ Example.fromPathSafe("/incorrect/non/matching/path");
 //   , tag: 'Left'
 //   , value:
 //      new Error(
-//          'Expected binding for path variable ':a_id' but instead found nothing'
+//          `Expected binding for path literal '/a' but instead found '/incorrect'`
 //      )
 //   }
 ```
@@ -279,6 +283,8 @@ This may happen if your types are out of sync with your patterns.
 If `Either` is an unfamiliar data structure, I recommend having a read of [The Perfect API](https://james-forbes.com/posts/the-perfect-api)
 
 > To extract the value from the either instance, simply check the `tag` and then conditionally access `.value` to get either the path or the error.
+
+> Note any excess path segments will appear on `.value.rest`
 
 ### `type.patterns`
 
@@ -299,7 +305,7 @@ Example.patterns;
 // }
 ```
 
-> Note the structure has normalized all values to be an array of patterns even if only one was provided.
+> Note the structure is normalized so that all values are an array of patterns even if only one string pattern was provided.
 
 ### `type.definition`
 
@@ -307,7 +313,7 @@ Returns the definition object you passed in when initialized the type. This is u
 
 ### `instance.value.rest`
 
-All instance of a subtype have an extra option property `rest?: string` which captures any additional path segments not mentioned in your pattern.
+All instances of a subtype have an extra option property `rest?: string` which captures any additional path segments not mentioned in your pattern.
 
 You can use this to create nested routes:
 
@@ -355,7 +361,11 @@ type One = superouter.Tag<typeof a>;
 
 ### `Value`
 
-Extracts the possible values from either a *superouter* sum type or a *superouter* instance type:
+Extracts the possible values from 
+
+- a supertype 
+- a instance type
+- a subtype constructor type
 
 ```typescript
 const a = Example.A({ a_id: "cool" });
