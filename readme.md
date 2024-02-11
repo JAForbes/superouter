@@ -191,6 +191,11 @@ In the context of routing this is useful when there are sets of similar routes w
 ```typescript
 Example.toPath(Example.A({ a_id: "cool" }));
 //=> /a/cool
+
+Example.toPath(Example.A({ a_id: "" }));
+//=> throw new Error(
+//     'Expected binding for path variable ':a_id' but instead found nothing'
+//   )
 ```
 
 Attempts to transform an instance of your route supertype into a path segment according to patterns specified in the definition.
@@ -198,6 +203,8 @@ Attempts to transform an instance of your route supertype into a path segment ac
 If it cannot satisfy the patterns you specified with the values available on the object it will throw.
 
 This may happen if your types are out of sync with your patterns.
+
+> Note any excess path segments will appear on `.value.rest`
 
 ### `type.fromPath`
 
@@ -214,10 +221,10 @@ Example.fromPath("/incorrect/non/matching/path");
 ### `type.toPathSafe`
 
 ```typescript
-Example.fromPathSafe(Example.A({ a_id: "cool" }));
-//=> { type: 'Either', tag: 'Right', value: { a_id: 'cool' } }
+Example.toPathSafe(Example.A({ a_id: "cool" }));
+//=> /a/cool
 
-Example.fromPathSafe({ type: "A", tag: "A", value: { a_id: "" } });
+Example.toPathsafe({ type: "A", tag: "A", value: { a_id: "" } });
 //=> { type: 'Either'
 //   , tag: 'Left'
 //   , value:
@@ -240,6 +247,8 @@ This may happen if your types are out of sync with your patterns.
 If `Either` is an unfamiliar data structure, I recommend having a read of [The Perfect API](https://james-forbes.com/posts/the-perfect-api)
 
 > To extract the value from the either instance, simply check the `tag` and then conditionally access `.value` to get either the path or the error.
+
+> Note any excess path segments will appear on `.value.rest`
 
 ### `type.fromPathSafe`
 
@@ -296,6 +305,38 @@ Example.patterns;
 
 Returns the definition object you passed in when initialized the type. This is useful for extracting type information about each route subtype. You can also use this to access the patterns for each route subtype, but its better to do so via `type.patterns` as you are guaranteed to get a normalized array of patterns even if in the definition you only configured a single item.
 
+### `instance.value.rest`
+
+All instance of a subtype have an extra option property `rest?: string` which captures any additional path segments not mentioned in your pattern.
+
+You can use this to create nested routes:
+
+```typescript
+// Parent Route
+const App = superouter.type('App', {
+    Home: (_: Record<string,string>) => '/',
+    Organization: (_: Record<string, string>) => '/admin/organizations' 
+})
+
+// Child route
+const prefix = '/admin/organizations' 
+const Orgs = superouter.type('Orgs', {
+    List: (_: { organization_id: string }) => `${prefix}/:organization_id`,
+    Group: (_: { organization_id: string, group_id: string }) => `${prefix}/:organization_id/groups/:group_id`
+})
+
+
+const originalUrl = `/admin/organizations/1/groups/2`
+
+const originalRoute = App.fromPath(originalUrl)
+// => App.Organization({ rest: '1/groups/2' })
+
+const child = Orgs.fromPath(parentPath)
+
+Orgs.toPath(child)
+// => '/admin/organizations/1/groups/2'
+```
+
 ## Type helpers
 
 ### `Tag`
@@ -306,10 +347,10 @@ Extracts the possible tags from either a *superouter* sum type or a *superouter*
 const a = Example.A({ a_id: "cool" });
 
 // A union of all possible values for `Example` e.g. 'A' | 'B' | 'C'
-type All = superouter.Value<typeof Example>;
+type All = superouter.Tag<typeof Example>;
 
 // Exactly 'A'
-type One = superouter.Value<typeof a>;
+type One = superouter.Tag<typeof a>;
 ```
 
 ### `Value`
@@ -324,6 +365,9 @@ type All = superouter.Value<typeof Example>;
 
 // Exactly { a_id: 'cool' }
 type One = superouter.Value<typeof a>;
+
+// Slightly broader: { a_id: string }
+type OneAgain = superouter.Value<typeof Example.A>
 ```
 
 ### `Instance`

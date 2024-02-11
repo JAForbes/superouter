@@ -75,7 +75,7 @@ export type RouteGet<N extends string, D extends Definition> = {
     fallback: T,
     visitor: (value: InternalValue<D[Key]>) => T,
     route: InternalInstance<N, D, keyof D>
-  ) => boolean;
+  ) => T;
 };
 
 function match(instance: any, options: any): any {
@@ -261,12 +261,7 @@ export function type<N extends string, D extends Definition>(
 
 type InternalValue<I extends (v: any) => any> = Parameters<I>[0];
 
-export type Value<A> = 
-    A extends API<any,any>
-        ? Instance<A>["value"]
-    : A extends Instance<any>
-      ? A["value"]
-      : never
+export type Value<A> = A extends API<any, any> ? Instance<A>["value"] : A extends Instance<any> ? A["value"] : A extends (x:any) => any ? Parameters<A>[0]: never;
 
 export type Tag<A> =
     A extends API<any,any>
