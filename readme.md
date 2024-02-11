@@ -30,6 +30,12 @@ route.isHome(route.fromPath("/1/groups/2"));
 //=> false
 ```
 
+## Quick start
+
+```bash
+npm install superouter@next
+```
+
 ## What
 
 A router that encourages you to use names and types instead of dealing with URL strings in your application logic.
