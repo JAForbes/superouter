@@ -27,8 +27,9 @@ export type API<N extends string, D extends Definition> = {
   patterns: { [R in keyof D]: string[] };
   toPath(instance: InternalInstance<N, D, keyof D>): string;
   toPathSafe(instance: InternalInstance<N, D, keyof D>): Either<Error, string>;
-  fromPath(url: string): InternalInstance<N, D, keyof D>;
-  fromPathSafe(url: string): Either<Error, InternalInstance<N, D, keyof D>>;
+  fromPath(path: string): InternalInstance<N, D, keyof D>;
+  fromPathSafe(path: string): Either<Error, InternalInstance<N, D, keyof D>>;
+  matchOr(fallback: () => InternalInstance<N, D, keyof D>, path: string): InternalInstance<N, D, keyof D>;
   match: <T>(
     instance: InternalInstance<N, D, keyof D>,
     options: MatchOptions<D, T>
@@ -150,13 +151,27 @@ export function type<N extends string, D extends Definition>(
     }
   }
 
-  function fromPathSafe(url: string): Either<Error, any> {
+  function matchOr(otherwise: () => any, path: string): any {
+    const res = fromPathSafe(path)
+    if (res.tag == 'Left') {
+      return otherwise()
+    } else {
+      return res.value
+    }
+  }
+
+  function fromPathSafe(path: string): Either<Error, any> {
+
+    if (path.includes('://')) {
+      return Either.Left(new Error(`Please provide a path segment instead of a complete url found:'${path}'`))
+    }
+    
     let bestRank = 0;
     let bestRoute: any = null;
     let error: any = null;
     for (const [tag, patterns] of Object.entries(api.patterns as Record<string, string[]>) ) {
       for (const pattern of patterns) {
-        const result = ParsePath.safe(url, pattern);
+        const result = ParsePath.safe(path, pattern);
         if (result.tag === "Left") {
           if (error == null) {
             error = result;
@@ -178,7 +193,7 @@ export function type<N extends string, D extends Definition>(
           type: "Either",
           tag: "Left",
           value: new Error(
-            `Could not parse url ${url} into any pattern on type ${type}`
+            `Could not parse url ${path} into any pattern on type ${type}`
           ),
         };
       }
@@ -208,6 +223,7 @@ export function type<N extends string, D extends Definition>(
     toPathSafe,
     fromPath,
     fromPathSafe,
+    matchOr,
     match,
     otherwise
   };
