@@ -8,7 +8,12 @@
   "unpkg": "dist/superouter.umd.min.js",
   "scripts": {
     "test": "node --import tsx --test test/*.ts",
-    "dev": "node --watch --import tsx --test test/*.ts"
+    "dev": "node --watch --import tsx --test test/*.ts",
+    "build:bundle": "esbuild lib/index.ts --bundle --format=esm --sourcemap  --allow-overwrite --outfile=./dist/superouter.js",
+    "build:types": "npx tsc",
+    "build:clear": "rm -fr ./dist",
+    "build": "npm run build:clear && npm run build:bundle && npm run build:types",
+    "prepublishOnly": "npm run build"
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
@@ -32,8 +37,14 @@
     "path-to-regexp"
   ],
   "devDependencies": {
+    "rollup": "^3.21.1",
+    "typescript": "^5.0.4",
+    "@rollup/plugin-node-resolve": "^15.0.2",
+    "@rollup/plugin-swc": "^0.1.0",
+    "@types/mithril": "^2.0.12",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
+    "esbuild": "^0.20.0",
     "eslint": "^8.56.0",
     "tsx": "^4.7.0"
   },

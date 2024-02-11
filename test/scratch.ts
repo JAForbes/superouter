@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import * as superouter from './index.js'
+import * as superouter from '../lib/index.js'
 
 const Example = superouter.type('Example', {
     Welcome: (_: { name?: string }) => [`/welcome/:name`, `/welcome`],
@@ -11,9 +11,10 @@ type Example = typeof Example["definition"]
 
 // Rough type definition of mithril component
 type Component<T> = (v: { attrs: T}) => ({ view: (v: { attrs: T }) => any })
-
-const WelcomeComp: Component<superouter.Value<Example["Welcome"]> > = () => ({ view: (v) => `Welcome ${v.attrs.name ?? 'User'}`})
-const LoginComp: Component<superouter.Value<Example["Login"]> > = () => ({ view: (v) => [
+const welcome = Example.Welcome({ name: 'cool' })
+const login = Example.Login({})
+const WelcomeComp: Component<superouter.Value<typeof welcome> > = () => ({ view: (v) => `Welcome ${v.attrs.name ?? 'User'}`})
+const LoginComp: Component<superouter.Value<typeof login> > = () => ({ view: (v) => [
     v.attrs.error ? 'There was an error: ' + v.attrs.error : null,
     'Please login using your username and password.'
 ]})
