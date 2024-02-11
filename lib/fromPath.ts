@@ -1,6 +1,5 @@
 import { Either } from "./either.js";
 
-
 type Mode =
 | "initialize"
 | "collectVarName"
@@ -102,6 +101,15 @@ export function safe(
       }
 
       if (prevMode == "collectVarValue") {
+        if (!varValue) {
+          return {
+            type: "Either",
+            tag: "Left",
+            value: new Error(
+              `Expected binding for path variable ':${varName}' but instead found nothing'`
+            ),
+          };
+        }
         value[varName] = varValue;
         varName = "";
         varValue = "";

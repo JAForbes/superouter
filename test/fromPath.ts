@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import test from "node:test";
 import assert from "node:assert";
-import { safe } from "../lib/parsePath.js";
+import { safe } from "../lib/fromPath.js";
 
-test("simple", () => {
+test("fromPath: simple", () => {
   const inputs = [
     ["/welcome/james", "/:name/:nam"],
     ["/welcome/james", "/welcome/:nam"],
@@ -27,7 +27,7 @@ test("simple", () => {
   assert.deepEqual(best.value, { nam: "james" }, "Expected parsed URL");
 });
 
-test("rest", () => {
+test("fromPath: rest", () => {
   const inputs = [
     ["/welcome/james", "/welcome/:name"],
     ["/welcome/james/extra", "/welcome/:name"],
@@ -54,7 +54,7 @@ test("rest", () => {
   );
 });
 
-test("garbage", () => {
+test("fromPath: garbage", () => {
   assert.deepEqual(safe("", ""), {
     type: "Either",
     tag: "Right",
@@ -96,7 +96,7 @@ test("garbage", () => {
   assert.throws(() => safe(null, ""));
 });
 
-test("complex", () => {
+test("fromPath: complex", () => {
   const inputs = [
     ["", "/a"],
     ["/a", ""],
@@ -120,8 +120,8 @@ test("complex", () => {
   {
     const [_, fail] = failures;
 
-    assert.match(fail.message, /literal path/);
-    assert.match(fail.message, /\/d/);
+    assert.match(fail.message, /Expected binding/);
+    assert.match(fail.message, /:c/);
   }
   assert.deepEqual(success, [
     { rest: "/a", value: {}, score: 0 },

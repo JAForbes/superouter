@@ -20,13 +20,13 @@ route.Group({ organization_id: "1" }); // Type error: Expected property group_id
 route.toPath(route.Group({ organization_id: "1", group_id: "2" }));
 //=> /1/groups/2
 
-route.parsePath("/1/groups/2");
+route.fromPath("/1/groups/2");
 //=> { type: 'Example', tag: 'Group', value: { organization_id: '1', group_id: '2' } }
 
-route.isGroup(route.parsePath("/1/groups/2"));
+route.isGroup(route.fromPath("/1/groups/2"));
 //=> true
 
-route.isHome(route.parsePath("/1/groups/2"));
+route.isHome(route.fromPath("/1/groups/2"));
 //=> false
 ```
 
@@ -85,17 +85,63 @@ Because we can rely on these type checks, in `superouter@v1` there are no runtim
 
 ### `type.toPath`
 
-### `type.parsePath`
+### `type.fromPath`
 
 ### `type.toPath`
 
-### `type.parsePathSafe`
+### `type.fromPathSafe`
 
 ### `type.patterns`
 
 ### `type.definition`
 
 Returns the definition object you passed in when initialized the type. This is useful for extracting type information about each route subtype. You can also use this to access the patterns for each route subtype, but its better to do so via `type.patterns` as you are guaranteed to get a normalized array of patterns even if in the definition you only configured a single item.
+
+## Type helpers
+
+### `Tag`
+
+Extracts the possible tags from either a superouter sum type or a superouter instance type:
+
+```typescript
+const a = Example.A({ a_id: 'cool' })
+
+// A union of all possible values for `Example` e.g. 'A' | 'B' | 'C'
+type All = superouter.Value<typeof Example>
+
+// Exactly 'A'
+type One = superouter.Value<typeof a>
+```
+
+### `Value`
+
+Extracts the possible values from either a superouter sum type or a superouter instance type:
+
+```typescript
+const a = Example.A({ a_id: 'cool' })
+
+// A union of all possible values for `Example`
+type All = superouter.Value<typeof Example>
+
+// Exactly { a_id: 'cool' }
+type One = superouter.Value<typeof a>
+```
+
+### `Instance`
+
+```typescript
+const Example = superouter.type("Example", {
+    A: (_: { a_id: string }) => `/a/:a_id`,
+    B: (_: { b_id: string }) => `/b/:b_id`,
+    C: (_: { c_id?: string }) => [`/c`, '/c/:c_id']
+});
+
+// The type of a route instance for your specific type
+type Instance = superouter.Instance<typeof Example>
+
+// Use it for typing your own custom route utils
+const yourFunction = (example: Instance) => example.tag
+```
 
 ## FAQ
 
@@ -119,7 +165,7 @@ While matching a path we increment a score value using the following rules:
 | /:variable                 | `2`              |
 | /literal                   | `4`              |
 
-`parsePath` / `parsePathSafe` and `toPath` / `toPathSafe` use the same logic to pick the winning route / url.
+`fromPath` / `fromPathSafe` and `toPath` / `toPathSafe` use the same logic to pick the winning route / url.
 
 ### Supporting multiple patterns per sub type
 
@@ -235,4 +281,36 @@ If you have that configured, you can skip returning the input argument which is 
 superouter.type("Example", {
   A: (_: { a_id: string }) => `/:a_id`,
 });
+```
+
+## Enforcing route definitions that can handle any path segment
+
+`superouter` deliberately allows you to create route definitions that assume specific path literals without a fallback.  This avoids a lot of needless checking in nested routes when it wouldn't make sense for the literal prefix to exist.
+
+But if you would like to guarantee your code can handle arbitrary paths, simply call `fromPath('/')` immediately after defintion.  Then your code will throw if the definition is not total.
+
+```typescript
+const Example = superouter.type("Example", {
+    A: (_: { a_id: string }) => `/a/:a_id`,
+    B: (_: { b_id: string }) => `/b/:b_id`,
+    C: (_: { c_id?: string }) => [`/c`, '/c/:c_id']
+});
+
+// will throw, doesn't match any case
+Example.fromPath('/')
+```
+
+vs
+
+```typescript
+const Example = superouter.type("Example", {
+  A: (_: { a_id: string }) => `/a/:a_id`,
+  B: (_: { b_id: string }) => `/b/:b_id`,
+  C: (_: { c_id?: string }) => [`/c`, '/c/:c_id'],
+  Default: (_: {}) => `/` 
+});
+
+// will not throw, matches 'Default' case
+Example.fromPath('/')
+// => { type: 'Example', tag: 'Default', value: {} }
 ```
