@@ -12,12 +12,12 @@ test("index:  basic", () => {
   assert.deepEqual(Example.A({ a_id: "hello" }), {
     type: "Example",
     tag: "A",
-    value: { a_id: "hello", rest: "/" },
+    value: { a_id: "hello", rest: "" },
   });
   assert.deepEqual(Example.B({ b_id: "hello" }), {
     type: "Example",
     tag: "B",
-    value: { b_id: "hello", rest: "/" },
+    value: { b_id: "hello", rest: "" },
   });
 
   assert.equal(Example.definition.A({ a_id: "" }), "/a/:a_id");
@@ -72,7 +72,7 @@ test("index:  fromPath", () => {
 
   assert.throws(() => Example.fromPath("/"), /Expected literal/);
   assert.deepEqual(
-    Example.C({ c_id: "cool", rest: "/" }),
+    Example.C({ c_id: "cool", rest: "" }),
     Example.fromPath("/c/cool")
   );
   assert.deepEqual(
@@ -148,3 +148,49 @@ test("index:  matchOr", () => {
     assert.deepEqual(res, Example.A({ a_id: "notcool" }));
   }
 });
+
+test('index:  rest', () => {
+  const Odin = superouter.type('Odin', {
+    Home: (_: Record<string,string>) => '/',
+    Organization: (_: Record<string, string>) => '/admin/organizations' 
+  })
+
+  assert.equal(Odin.toPath(Odin.Organization({ rest: '1' })), '/admin/organizations/1')
+  assert.equal(Odin.toPath(Odin.Organization({ rest: '/1' })), '/admin/organizations/1')
+  assert.equal(Odin.toPath(Odin.Organization({ rest: '/1/' })), '/admin/organizations/1')
+  assert.equal(Odin.toPath(Odin.Organization({ rest: '1/' })), '/admin/organizations/1')
+
+  const Orgs = superouter.type('Orgs', {
+    List: (_: { organization_id: string }) => `/:organization_id`,
+    Group: (_: { organization_id: string, group_id: string }) => `/:organization_id/groups/:group_id`
+  })
+
+  {
+    const parentPath = Odin.toPath(Odin.Organization({ rest: '1' }))
+  
+    const child = Orgs.fromPath(parentPath.replace(`/admin/organizations`, ''))
+    
+    assert.equal(Orgs.toPath(child), '/1')
+  }
+  {
+    const originalUrl = `/admin/organizations/1/groups/2`
+
+    const originalRoute = Odin.fromPath(originalUrl)
+
+    assert.deepEqual(originalRoute, Odin.Organization({ rest: '1/groups/2' }))
+
+    const parentPath = Odin.toPath(originalRoute)
+
+    assert.equal(originalUrl, parentPath)
+
+    const prefix = `/admin/organizations`
+  
+    const child = Orgs.fromPath(parentPath.replace(prefix, ''))
+    
+    assert.equal(Orgs.toPath(child), '/1/groups/2')
+
+    assert.equal(prefix + Orgs.toPath(child), originalUrl)
+
+    
+  }
+})

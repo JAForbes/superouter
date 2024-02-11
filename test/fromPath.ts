@@ -22,7 +22,7 @@ test("fromPath: simple", () => {
     .sort((a, b) => b.value.score - a.value.score)
     .map((x) => x.value)[0];
 
-  assert(best.rest == "/", "most specific wins");
+  assert(best.rest == "", "most specific wins");
 
   assert.deepEqual(best.value, { nam: "james" }, "Expected parsed URL");
 });
@@ -45,8 +45,8 @@ test("fromPath: rest", () => {
     .sort((a, b) => b.value.score - a.value.score)
     .map((x) => x.value);
 
-  assert(sorted[0].rest == "/", "most specific wins");
-  assert(sorted[1].rest == "/extra", "rest has expected value");
+  assert.equal(sorted[0].rest, "", "most specific wins");
+  assert.equal(sorted[1].rest, "extra", "rest has expected value");
   assert.deepEqual(
     sorted[1].value,
     { name: "james" },
@@ -58,34 +58,34 @@ test("fromPath: garbage", () => {
   assert.deepEqual(safe("", ""), {
     type: "Either",
     tag: "Right",
-    value: { rest: "/", value: {}, score: 0 },
+    value: { rest: "", value: {}, score: 0 },
   });
   assert.deepEqual(safe("////", ""), {
     type: "Either",
     tag: "Right",
-    value: { rest: "/", value: {}, score: 0 },
+    value: { rest: "", value: {}, score: 0 },
   });
   assert.deepEqual(safe("", "////////"), {
     type: "Either",
     tag: "Right",
-    value: { rest: "/", value: {}, score: 0 },
+    value: { rest: "", value: {}, score: 0 },
   });
   assert.deepEqual(safe("///////", "////////"), {
     type: "Either",
     tag: "Right",
-    value: { rest: "/", value: {}, score: 0 },
+    value: { rest: "", value: {}, score: 0 },
   });
 
   assert.deepEqual(safe("a", ":a"), {
     type: "Either",
     tag: "Right",
-    value: { rest: "/", value: { a: "a" }, score: 1 },
+    value: { rest: "", value: { a: "a" }, score: 1 },
   });
 
   assert.deepEqual(safe(":::::", ":a"), {
     type: "Either",
     tag: "Right",
-    value: { rest: "/", value: { a: ":::::" }, score: 1 },
+    value: { rest: "", value: { a: ":::::" }, score: 1 },
   });
 
   // @ts-expect-error
@@ -124,10 +124,10 @@ test("fromPath: complex", () => {
     assert.match(fail.message, /:c/);
   }
   assert.deepEqual(success, [
-    { rest: "/a", value: {}, score: 0 },
-    { rest: "/", value: {}, score: 3 },
+    { rest: "a", value: {}, score: 0 },
+    { rest: "", value: {}, score: 3 },
     {
-      rest: "/and/something/extra",
+      rest: "and/something/extra",
       value: { a: "welcome", b: "james", c: "you", g: "cool" },
       score: 19,
     },

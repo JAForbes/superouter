@@ -2,6 +2,7 @@
 
 import { Either } from "./either.js";
 import * as ParsePath from "./fromPath.js";
+import { normalizePathSegment, normalizeRest } from "./normalize.js";
 
 export type Patterns = string | string[];
 
@@ -88,7 +89,6 @@ function otherwise(tags:string[]) {
         )
 }
 
-
 export function type<N extends string, D extends Definition>(
   type: N,
   routes: D
@@ -134,7 +134,8 @@ export function type<N extends string, D extends Definition>(
     }
 
     if (bestPath) {
-      return { type: "Either", tag: "Right", value: bestPath.join("/") };
+      const  value = normalizePathSegment(bestPath.concat(route.value.rest).join("/"))
+      return { type: "Either", tag: "Right", value };
     } else if (errors.length) {
       return { type: "Either", tag: "Left", value: new Error(errors[0]) };
     } else {
@@ -178,7 +179,7 @@ export function type<N extends string, D extends Definition>(
           }
         } else {
           if (bestRoute == null || result.value.score > bestRank) {
-            bestRoute = { type, tag, value: { ...result.value.value, rest: result.value.rest } };
+            bestRoute = api[tag]({ ...result.value.value, rest: result.value.rest })
             bestRank = result.value.score;
           }
         }
@@ -230,9 +231,7 @@ export function type<N extends string, D extends Definition>(
 
   for (const [tag, of] of Object.entries(routes)) {
     api[tag] = (value:any = {}) => {
-        if ( !value.rest ) {
-            value.rest = '/'
-        }
+        value.rest = normalizeRest(value.rest)
         return { type, tag, value }
     };
 

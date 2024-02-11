@@ -1,4 +1,5 @@
 import { Either } from "./either.js";
+import { normalizeRest } from "./normalize.js";
 
 type Mode =
 | "initialize"
@@ -200,7 +201,7 @@ export function safe(
   if (rest) {
     score = Math.max(0, score - 1);
   }
-  return { type: "Either", tag: "Right", value: { rest, value, score } };
+  return { type: "Either", tag: "Right", value: { rest: normalizeRest(rest), value, score } };
 }
 
 export function unsafe(  _path: string, _pattern: string): { rest: string, value: Record<string,string>, score: number } {
