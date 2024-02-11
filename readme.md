@@ -77,11 +77,99 @@ Because we can rely on these type checks, in `superouter@v1` there are no runtim
 
 ### `is[Tag]`
 
+```typescript
+Example.isA( Example.A({ a_id: 'cool' }))
+// => true
+
+Example.isA( Example.C({}))
+// => false
+```
+
+For every subtype of your route there is a generated route to extract  if a specific instance has that tag.  
+
+> You can also just check the `.tag` property on the route instance
+
 ### `get[Tag]`
+
+```typescript
+Example.getA( 0, x => Number(x.a_id), Example.A({ a_id: '4' }))
+// => 4
+
+Example.getA( 0, x => Number(x.a_id), Example.B({ b_id: '2' }))
+// => 0
+```
+
+For every subtype of your route there is a generated route to extract a value from a specific route.  You also pass in a default value to ensure you are handling every case.
+
+> You can also access the `.value` property on the route instance but you'd have to type narrow on tag anyway, this is likely more convenient.
 
 ### `match`
 
+```typescript
+const Example = superouter.type("Example", {
+  A: (_: { a_id: string }) => `/a/:a_id`,
+  B: (_: { b_id: string }) => `/b/:b_id`,
+  C: (_: { c_id?: string }) => [`/c`, '/c/:c_id'],
+});
+
+type Instance = superouter.Instance<typeof Example>
+
+const f = (route: Instance) => Example.match( route, {
+  A: ({ a_id }) => Number(a_id),
+  B: ({ b_id }) => Number(b_id),
+  C: ({ c_id }) => c_id ? Number(c_id) : 0
+})
+
+f(Example.A({ a_id: '4' }))
+//=> 4
+
+f(Example.B({ b_id: '2' }))
+//=> 2
+
+f(Example.C({ c_id: '100' }))
+//=> 100
+
+f(Example.C({}))
+//=> 0
+```
+
+Convert a route type into another type by matching on every value.  In the avove example we're converting all routes to a `number`.
+
+`.match` is a discriminated union, which means you are forced to handle every case, if a case is missing, it won't typecheck.
+
 ### `otherwise` | `_`
+
+```typescript
+// This example extends the above `match` example.
+
+// Create a function that handles cases B and C
+const _ = Example.otherwise(['B', 'C'])
+
+// 
+const g = (r: Instance) => Example.match(r, {
+  A: () => 1,
+
+  // B and C will be -1
+  ..._(() => -1)
+})
+
+
+g(Example.A({ a_id: 'cool' }))
+//=> 1
+
+
+g(Example.B({ b_id: 'cool' }))
+//=> -1
+
+
+g(Example.C({ c_id: 'cool' }))
+//=> -1
+
+```
+
+`.otherwise` is a helper to be used in combination with `.match`.  It allows you to select a subset of routes and handle them uniformly.  You can then mix in this default set into a match.
+
+In the context of routing this is useful when there are sets of similar routes within a larger superset, e.g. routes related to auth/access, or routes that may not have some meta context like an `organization_id`.
 
 ### `type.toPath`
 
@@ -104,13 +192,13 @@ Returns the definition object you passed in when initialized the type. This is u
 Extracts the possible tags from either a superouter sum type or a superouter instance type:
 
 ```typescript
-const a = Example.A({ a_id: 'cool' })
+const a = Example.A({ a_id: "cool" });
 
 // A union of all possible values for `Example` e.g. 'A' | 'B' | 'C'
-type All = superouter.Value<typeof Example>
+type All = superouter.Value<typeof Example>;
 
 // Exactly 'A'
-type One = superouter.Value<typeof a>
+type One = superouter.Value<typeof a>;
 ```
 
 ### `Value`
@@ -118,29 +206,29 @@ type One = superouter.Value<typeof a>
 Extracts the possible values from either a superouter sum type or a superouter instance type:
 
 ```typescript
-const a = Example.A({ a_id: 'cool' })
+const a = Example.A({ a_id: "cool" });
 
 // A union of all possible values for `Example`
-type All = superouter.Value<typeof Example>
+type All = superouter.Value<typeof Example>;
 
 // Exactly { a_id: 'cool' }
-type One = superouter.Value<typeof a>
+type One = superouter.Value<typeof a>;
 ```
 
 ### `Instance`
 
 ```typescript
 const Example = superouter.type("Example", {
-    A: (_: { a_id: string }) => `/a/:a_id`,
-    B: (_: { b_id: string }) => `/b/:b_id`,
-    C: (_: { c_id?: string }) => [`/c`, '/c/:c_id']
+  A: (_: { a_id: string }) => `/a/:a_id`,
+  B: (_: { b_id: string }) => `/b/:b_id`,
+  C: (_: { c_id?: string }) => [`/c`, "/c/:c_id"],
 });
 
 // The type of a route instance for your specific type
-type Instance = superouter.Instance<typeof Example>
+type Instance = superouter.Instance<typeof Example>;
 
 // Use it for typing your own custom route utils
-const yourFunction = (example: Instance) => example.tag
+const yourFunction = (example: Instance) => example.tag;
 ```
 
 ## FAQ
@@ -285,19 +373,19 @@ superouter.type("Example", {
 
 ## Enforcing route definitions that can handle any path segment
 
-`superouter` deliberately allows you to create route definitions that assume specific path literals without a fallback.  This avoids a lot of needless checking in nested routes when it wouldn't make sense for the literal prefix to exist.
+`superouter` deliberately allows you to create route definitions that assume specific path literals without a fallback. This avoids a lot of needless checking in nested routes when it wouldn't make sense for the literal prefix to exist.
 
-But if you would like to guarantee your code can handle arbitrary paths, simply call `fromPath('/')` immediately after defintion.  Then your code will throw if the definition is not total.
+But if you would like to guarantee your code can handle arbitrary paths, simply call `fromPath('/')` immediately after defintion. Then your code will throw if the definition is not total.
 
 ```typescript
 const Example = superouter.type("Example", {
-    A: (_: { a_id: string }) => `/a/:a_id`,
-    B: (_: { b_id: string }) => `/b/:b_id`,
-    C: (_: { c_id?: string }) => [`/c`, '/c/:c_id']
+  A: (_: { a_id: string }) => `/a/:a_id`,
+  B: (_: { b_id: string }) => `/b/:b_id`,
+  C: (_: { c_id?: string }) => [`/c`, "/c/:c_id"],
 });
 
 // will throw, doesn't match any case
-Example.fromPath('/')
+Example.fromPath("/");
 ```
 
 vs
@@ -306,11 +394,11 @@ vs
 const Example = superouter.type("Example", {
   A: (_: { a_id: string }) => `/a/:a_id`,
   B: (_: { b_id: string }) => `/b/:b_id`,
-  C: (_: { c_id?: string }) => [`/c`, '/c/:c_id'],
-  Default: (_: {}) => `/` 
+  C: (_: { c_id?: string }) => [`/c`, "/c/:c_id"],
+  Default: (_: {}) => `/`,
 });
 
 // will not throw, matches 'Default' case
-Example.fromPath('/')
+Example.fromPath("/");
 // => { type: 'Example', tag: 'Default', value: {} }
 ```
