@@ -10,7 +10,7 @@
   "scripts": {
     "test": "node --import tsx --test test/*.ts",
     "dev": "node --watch --import tsx --test test/*.ts",
-    "build:bundle": "esbuild lib/index.ts --bundle --format=esm --sourcemap  --allow-overwrite --outfile=./dist/superouter.js",
+    "build:bundle": "esbuild lib/index.ts --bundle --format=esm --sourcemap  --allow-overwrite --outfile=./dist/superouter.esm.js",
     "build:types": "npx tsc",
     "build:clear": "rm -fr ./dist",
     "build": "npm run build:clear && npm run build:bundle && npm run build:types",
