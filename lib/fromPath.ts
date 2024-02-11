@@ -43,17 +43,10 @@ export function safe(
   let mode: Mode = "initialize";
   let prevMode: Mode = "initialize";
   let score = 0;
-  const maxIterations = path.length + pattern.length + 2;
+  const maxIterations = path.length + pattern.length;
   let iterations = 0;
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    if (iterations >= maxIterations) {
-      throw new Error(
-        `Unexpected recursive logic while parsing path '${_path}' using pattern '${_pattern}'`
-      );
-    }
-    iterations++;
-
     if (mode == "initialize") {
       while (pattern[patternI] === "/") {
         patternI++;
@@ -128,6 +121,13 @@ export function safe(
         break;
       }
     }
+
+    if (iterations >= maxIterations) {
+      throw new Error(
+        `Unexpected recursive logic while parsing path '${_path}' using pattern '${_pattern}'`
+      );
+    }
+    iterations++;
 
     if (
       (mode == "collectLiteralName" || mode == "collectVarName") &&
