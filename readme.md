@@ -1,372 +1,412 @@
-superouter
-----------
+## superouter
 
-[![Next](https://github.com/JAForbes/superouter/actions/workflows/release-alpha.yml/badge.svg)](https://github.com/JAForbes/superouter/actions/workflows/release-alpha.yml)
-[![Test](https://github.com/JAForbes/superouter/actions/workflows/test.yml/badge.svg)](https://github.com/JAForbes/superouter/actions/workflows/test.yml)
+```typescript
+import * as superouter from "superouter";
 
-Quick Start
-===========
+const route = superouter.type("Example", {
+  Home: (_: { organization_id: string }) => [_, `/:organization_id`],
+  Group: (_: { organization_id: string; group_id: string }) => [
+    _,
+    `/:organization_id/groups/:group_id`,
+  ],
+});
+
+route.Home({ organization: "hi" }); // Type error: No property named organization
+
+route.Home({ organization_id: 4 }); // Type error: Expected string instead of number
+
+route.Group({ organization_id: "1" }); // Type error: Expected property group_id:string
+
+route.toPath(route.Group({ organization_id: "1", group_id: "2" }));
+//=> /1/groups/2
+
+route.fromPath("/1/groups/2");
+//=> { type: 'Example', tag: 'Group', value: { organization_id: '1', group_id: '2' } }
+
+route.isGroup(route.fromPath("/1/groups/2"));
+//=> true
+
+route.isHome(route.fromPath("/1/groups/2"));
+//=> false
+```
+
+## Quick start
+
+```bash
+npm install superouter@next
+```
+
+## What
+
+A router that encourages you to use names and types instead of dealing with URL strings in your application logic.
+
+- Re-designed to take advantage of modern Typescript features
+- Simple: < N (TBD) LOC
+- Fast: Simple pattern matching rules and a custom (and imperative) parser to ensure the router is faster
+- Ranked match: Matches the most specific route
+
+## Why
+
+Route state is the primary state in your application. If we derive state from the URL we automatically get deep linkable/sharable apps. We can cold boot our apps from the URL state and not have to click multiple times to get back to what we were doing during development. Relying on a URL state as the foundation of your app state leads to a better experience for users and developers and it forces us to think about what is the total possibility space for a particular screen ahead of time.
+
+Advancements in hot module reloading has potentially misguided us into focusing too much on DX and not UX.  If we refresh the app constantly we are forced to experience load times, and route navigations repeatedly - just like a user.  So let's fix the actual problem by embedding more state in the URL instead of hiding it behind fancy tools.
+
+If we are going to rely on route state so much, then we should probably not do stringly checks against URL pathnames. We should instead match on data.
+
+*superouter* gives you a data-centric experience for dealing with route state. *uperouter* instances are just data, they have no instance methods, you can store them in localStorage, in your state management library, in your database etc - this is by design.
+
+*superouter* is deliberately small and simple. You are encouraged to build specific niceties on top of *superouter* for your framework of choice.
+
+*superouter* also encourages you to think of your route state as a tagged union type. And so the API offers affordances to match on route state and handle each case specifically with the data that is expected for that given state. This is more reliable than adhoc ternaries / if statements that match on specific URL paths and aren't updated as your route definitions organically evolve.
+
+## API
+
+### Creating a route type:
+
+First we define the supertype. We do so via the `superouter.type` function. The first argument is the name of your route. The name is there so you can have different route types for different parts of your app and each route type is incompatible with the others methods.
+
+The second argument is a record where the key is the name of the route and the value is a function: `<T>(value:T) => [T, string]`.
+
+*superouter* analyzes your definition via `Parameters<Definition>` to infer the structure of each route subtype.
+
+The function takes the arguments you expect to parse from your URL pattern and returns the pattern that will be used to parse the URL string.
+
+```js
+const route = superouter.type("Example", {
+  Home: (_: { organization_id: string }) => `/:organization_id`,
+  Group: (_: { organization_id: string, group_id: string }) =>
+    `/:organization_id/groups/:group_id`,
+});
+```
+
+In the above example, typescript now knows `route.Group` can only be constructed with both an `organization_id` and a `group_id` whereas `Route.Home` only needs an `organization_id`. We also generate helper methods, and typescript knows this dynamic methods exist e.g. `isGroup` or `isHome`.
+
+> 🤓 We call `Example` our supertype, and `Example.Group` and `Example.Home` our subtypes.
+
+### `is[Tag]`
+
+```typescript
+Example.isA( Example.A({ a_id: 'cool' }))
+// => true
+
+Example.isA( Example.C({}))
+// => false
+```
+
+For every subtype of your route there is a generated route to extract  if a specific instance has that tag.  
+
+> You can also just check the `.tag` property on the route instance
+
+### `get[Tag]`
+
+```typescript
+Example.getA( 0, x => Number(x.a_id), Example.A({ a_id: '4' }))
+// => 4
+
+Example.getA( 0, x => Number(x.a_id), Example.B({ b_id: '2' }))
+// => 0
+```
+
+For every subtype of your route there is a generated route to extract a value from a specific route.  You also pass in a default value to ensure you are handling every case.
+
+> You can also access the `.value` property on the route instance but you'd have to type narrow on tag anyway, this is likely more convenient.
+
+### `match`
+
+```typescript
+const Example = superouter.type("Example", {
+  A: (_: { a_id: string }) => `/a/:a_id`,
+  B: (_: { b_id: string }) => `/b/:b_id`,
+  C: (_: { c_id?: string }) => [`/c`, '/c/:c_id'],
+});
+
+type Instance = superouter.Instance<typeof Example>
+
+const f = (route: Instance) => Example.match( route, {
+  A: ({ a_id }) => Number(a_id),
+  B: ({ b_id }) => Number(b_id),
+  C: ({ c_id }) => c_id ? Number(c_id) : 0
+})
+
+f(Example.A({ a_id: '4' }))
+//=> 4
+
+f(Example.B({ b_id: '2' }))
+//=> 2
+
+f(Example.C({ c_id: '100' }))
+//=> 100
+
+f(Example.C({}))
+//=> 0
+```
+
+Convert a route type into another type by matching on every value.  In the avove example we're converting all routes to a `number`.
+
+`.match` is a discriminated union, which means you are forced to handle every case, if a case is missing, it won't typecheck.
+
+### `otherwise` | `_`
+
+```typescript
+// This example extends the above `match` example.
+
+// Create a function that handles cases B and C
+const _ = Example.otherwise(['B', 'C'])
+
+// 
+const g = (r: Instance) => Example.match(r, {
+  A: () => 1,
+
+  // B and C will be -1
+  ..._(() => -1)
+})
 
 
-`npm install superouter`
+g(Example.A({ a_id: 'cool' }))
+//=> 1
 
-```jsx
-const superouter = require('superouter')
 
-const Route = 
-    superouter.type('Route', {
-        Home: '/',
-        Post: '/posts/:post',
-        Settings: '/settings/...rest'
-    })
+g(Example.B({ b_id: 'cool' }))
+//=> -1
 
-Route.of.Home() 
-//=> { type: 'Route', case: 'Home' }
-Route.of.Post({ post }) 
-//=> { type: 'Route', case: 'Post', value: { post }}
-Route.of.Settings({ rest: '/a/b/c' })
-// => { type: 'Route', case: 'Settings', value: { rest: '/a/b/c' } }
 
-const view = 
-    Route.fold(
-        { Home: () => <Home/>
-        , Post: ({ post }) => <Post post={post} />
-        , Settings: ({ rest }) => <Settings subpath={rest} />
-        }
+g(Example.C({ c_id: 'cool' }))
+//=> -1
+
+```
+
+`.otherwise` is a helper to be used in combination with `.match`.  It allows you to select a subset of routes and handle them uniformly.  You can then mix in this default set into a match.
+
+In the context of routing this is useful when there are sets of similar routes within a larger superset, e.g. routes related to auth/access, or routes that may not have some meta context like an `organization_id`.
+
+### `type.toPath`
+
+### `type.fromPath`
+
+### `type.toPath`
+
+### `type.fromPathSafe`
+
+### `type.patterns`
+
+### `type.definition`
+
+Returns the definition object you passed in when initialized the type. This is useful for extracting type information about each route subtype. You can also use this to access the patterns for each route subtype, but its better to do so via `type.patterns` as you are guaranteed to get a normalized array of patterns even if in the definition you only configured a single item.
+
+## Type helpers
+
+### `Tag`
+
+Extracts the possible tags from either a superouter sum type or a superouter instance type:
+
+```typescript
+const a = Example.A({ a_id: "cool" });
+
+// A union of all possible values for `Example` e.g. 'A' | 'B' | 'C'
+type All = superouter.Value<typeof Example>;
+
+// Exactly 'A'
+type One = superouter.Value<typeof a>;
+```
+
+### `Value`
+
+Extracts the possible values from either a superouter sum type or a superouter instance type:
+
+```typescript
+const a = Example.A({ a_id: "cool" });
+
+// A union of all possible values for `Example`
+type All = superouter.Value<typeof Example>;
+
+// Exactly { a_id: 'cool' }
+type One = superouter.Value<typeof a>;
+```
+
+### `Instance`
+
+```typescript
+const Example = superouter.type("Example", {
+  A: (_: { a_id: string }) => `/a/:a_id`,
+  B: (_: { b_id: string }) => `/b/:b_id`,
+  C: (_: { c_id?: string }) => [`/c`, "/c/:c_id"],
+});
+
+// The type of a route instance for your specific type
+type Instance = superouter.Instance<typeof Example>;
+
+// Use it for typing your own custom route utils
+const yourFunction = (example: Instance) => example.tag;
+```
+
+## FAQ
+
+### Why didn't you use `path-to-regexp` (et al) to parse the route patterns?
+
+We were intending on doing exactly that, thinking it would be faster and support more features. But given `path-to-regexp` supports so many features, it would be difficult to determine the pattern match rank for all the variations.
+
+Superouter instead has a very simple pattern language: you have literals and variables and patterns always accept extra segments. This makes for simpler ranking system. We're yet to need more power than that in route pattern matching for web apps.
+
+Finally it is also harder to get useful feedback about why something failed or didn't match when using Regular Expressions. Superouter has a very simple single pass parser that gives the user helpful feedback when a match couldn't be made. With regexp when something doesn't match you don't get a lot of insight into what you did wrong.
+
+## Advanced / Fun
+
+### How does ranking work
+
+While matching a path we increment a score value using the following rules:
+
+| Type of match              | Score            |
+| -------------------------- | ---------------- |
+| Extra fragments after path | `max(0,score-1)` |
+| /:variable                 | `2`              |
+| /literal                   | `4`              |
+
+`fromPath` / `fromPathSafe` and `toPath` / `toPathSafe` use the same logic to pick the winning route / url.
+
+### Supporting multiple patterns per sub type
+
+```js
+const Example = type("Example", {
+  A: (x: { a_id?: string }) => [`/example/a/:a`, `/example/a`],
+  B: (x: { b_id: string }) => `/example/b/:b`,
+});
+```
+
+Note in the above example we are returning a list of possible patterns for `A`: [`/example/a/:a`, `/example/a`]. This means if we hit `/example/a` and there is no binding for `/:a` we still get a match and superouter will return a value object of `{}`
+
+Because we are matching a pattern that has no bindings we make the type of `a_id` optional: `{ a_id?: string }`. Unfortunately we can't enforce this kind of relationship within typescript so you'll have to be diligent when defining your route defintions to keep your types and your patterns in sync.
+
+### Integrating with Mithril's router
+
+A route type returns its patterns and names via `type.patterns`, it also returns the original definition you passed in as `type.definition`
+
+We can use this metadata to both typecheck an index of `Route: Component` and then reference that index against its url patterns so we get an index of `Pattern: Component`.
+
+From there we can thread that through toe the framework API (in this case mithril's `m.route`)
+
+```typescript
+const Example = type("Example", {
+  Welcome: (x: { name?: string }) => [`/welcome/:name`, `/welcome`],
+  Login: (x: { error?: string }) => [`/login/error/:error`, `/login`],
+});
+
+type Example = (typeof Example)["definition"];
+
+// Rough type definition of mithril component
+type Component<T> = (v: { attrs: T }) => { view: (v: { attrs: T }) => any };
+
+type Value = superouter.Value;
+
+const WelcomeComp: Component<Value<Example["Welcome"]>> = () => ({
+  view: (v) => `Welcome ${v.attrs.name ?? "User"}`,
+});
+const LoginComp: Component<Value<Example["Login"]>> = () => ({
+  view: (v) => [
+    v.attrs.error ? "There was an error: " + v.attrs.error : null,
+    "Please login using your username and password.",
+  ],
+});
+
+type Components<D extends Definition> = {
+  [K in keyof D]: Component<Parameters<D[K]>[0]>;
+};
+
+const Components: Components<Example> = {
+  Welcome: WelcomeComp,
+  Login: LoginComp,
+};
+
+m.route(
+  document.body,
+  "/",
+  Object.fromEntries(
+    Object.entries(Example.patterns).flatMap(([k, v]) =>
+      v.map((v2) => [v2, Components[k]])
     )
+  )
+);
+```
 
-view ( Route.of.Home() ) //=> <Home />
+Effectively we're zipping together the patterns with their corresponding mithril components. We're also using the route definition to parameterize the mithril components. So if we change our route definition without updating our component we will get a useful type error.
 
-Route.matchOr( () => Route.of.Home(), '/settings/1/2/3' )
-//=> Route.of.Settings({ rest: '1/2/3' })
+Note the same is possible for any framework e.g. for React Router, but our iteration would instead return the contract expected there e.g.
 
-const renderRoute = () => {
-    const url = window.location.pathname
-
-    React.render( 
-        view( Route.matchOr( () => Route.of.Home(), url ) )
-        , document.body 
-    )
+```typescript
+{
+    path: pattern,
+    element: ReactComponent,
 }
-
-// Respond to history
-history.onpopstate( () => renderRoute() )
-
-// Render initial route
-renderRoute()
 ```
 
-What?
-=====
+The convention of `/name/:pattern` is near universal.
 
-- Data Driven
-- Pure
-- Predictable
-- Simple
-- Composeable
-- Server + Client
-- Serializable
+### Nested / Dynamic routes
 
-#### Predictable
+superouter is stateless, it never touches your browser `history` object or peeks into `window.location`. It is up to you what URL `path` you pass in to parse.
 
-In the land of SPA's, routing bugs are probably the most frustrating to debug, because you are often losing context as the page switches.
+This means you can have different superouter instances aribtarily at different depths within your application, and you just need to either include the full prefix path in the definition, or remove the redundant repeating part of the pathname that you pass in for a nested route.
 
-The standard approach to routing is to generate a regex and pick the first match that works.
+As to how you should bind that into your framework of choice, that is up to you. All superouter does is help with the representation of data and the corresponding type checks and information.
 
-What this library does differently is handle the logic of routing with a parser that can justify and rank its decisions which can lead to 
-better matches that don't rely on definition order.
+## ESLint / Typescript complaining about no-unused-vars in route definitions
 
-E.g. the following patterns can match the same URL, but one is more specific.
+You can optionally return the input argument as part of the tuple to silence this warning "natively" e.g.
 
-| Type          | Pattern                 | 
-|---------------|-------------------------|
-| Less Specific | `/accounts/:account_id` |
-| More Specific | `/accounts/create`     |
-
-If we had a url `/accounts/create` both patterns will match, but clearly a particular pattern is the intended match.  Most routers rely on definition order but this library will rank matches by specificity and return the best match.
-
-You can then take that stream of known structures and very easily connect it to the history API or server side routing.  It's exactly the kind of thing you don't realise you need until you do.
-
-#### Data Driven
-
-This library uses a specification for its data structures from [sum-type](https://github.com/JAForbes/sum-type).  You can take the output and generate your own framework or application behaviour in a standard structured way.  You can also persist / serialize and transfer these data structures because reference equality is never relied upon.
-
-This means you can do fun things like have your API define its endpoints with superouter and then send type information over the wire to generate constructors for a client side SDK for better validation.
-
-Or you can store route information as analytics and replay them later without losing accompanying state in the deserialization process.
-
-Routes are the heart of our applications but by compressing them into strings and regular expressions we are throwing away valuable information that can be used in various parts of the application.
-
-#### Pure
-
-This library exposes pure functions, it's up to you to connect the routing data structures to your own framework or native browser API.  That at first may sound like a chore, but it's exactly what you need when you decide you want to do some fancy hydration, SSR or custom routing transitions.
-
-When a library manages the routing side effects, you may find yourself hacking around the edges to do the thing you actually want to do.
-
-#### Simple
-
-All this library does is handle conversions between different types of data, it doesn't perform any side effects directly so it's easy to explore and test and therefore reliable to build upon.
-
-#### Composeable
-
-Because the data structures used by this library are part of the exposed API, you can compose this library's functions with your own to create something new and interesting without having to submit a PR.
-
-API
-===
-
-### `superouter.type`
-
-`superouter.type(typename: String, { [caseName]: patternString })`
-
-Defines a `Route` type for your application.
-
-```js
-
-const Route = 
-    superouter.type('Route', {
-        Home: '/',
-        Settings: '/settings/:page',
-        Messages: '/messages/:user/:thread'
-    })
+```typescript
+superouter.type("Example", {
+  A: (x: { a_id: string }) => `/:a_id`,
+});
 ```
 
-The `patternString` can include the following forms.
+Alternatively you can name the var `_` and then tell ESLint to never warn about unused variables matching that pattern:
 
-| Type     | Format    | Explanation                                |
-|----------|-----------|--------------------------------------------|
-| Path     | `text`    | A static segment of a route path.          |
-| Part     | `:text`   | A dynamic segment of a route path          |
-| Variadic | `...text` | 1 or more dynamic segments of a route path |
-
-`patternString` types cannot be mixed.  So `:...text` is not valid.
-
----
-
-### `Route`
-
-`Route` is a type that represents the various pages in your application.
-
-You can create more than 1 `Route` type for different sections or layers of your app.  You can define all your Routes centrally or cascade your `Route` matching in layers in a typed manner.
-
-The `Route` type will have a constructor function for each case of `Route` you specified in its definition under the namespace `of`.  These `Route` constructor functions will `throw` if a property specified in the pattern was not passed in at initialization.
-
-To safely create a `Route` instance from a `url`, use `Route.matchOr`.
-
-```js
-
-const Route =
-    superouter.type('Route', {
-        Home: '/',
-        Settings: '/settings/:section/:setting'
-    })
-
-Route.of.Settings({ section: 'ci', settings: 'access' })
-// Route.of.Settings({ section: 'ci', settings: 'access' })
-
-Route.of.Settings({ missing: 1, things: 2 })
-//=> TypeError: ...
+```json
+{
+  "rules": {
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { "varsIgnorePattern": "_", "argsIgnorePattern": "_" }
+    ]
+  }
+}
 ```
 
----
+If you have that configured, you can skip returning the input argument which is equivalent but arguably cleaner:
 
-#### `Route.fold` 
-
-`({ [routeCaseNames]: ({ ...routeArgs }) => a }) => Route => a`
-
-```jsx
-const view = 
-    Route.fold({
-        Home: () => <Home/>,
-        Post: ({ name }) => <Post postName={name} />
-    })
-
-view ( Route.of.Post({ name: 'A Perfect API' }) )
-// => <Post postname="A Perfect API"/>
+```typescript
+superouter.type("Example", {
+  A: (_: { a_id: string }) => `/:a_id`,
+});
 ```
 
-Used to define functions that handle all the potential routes in your application.  
+## Enforcing route definitions that can handle any path segment
 
-For some more advanced error checking try [sum-type](https://github.com/JAForbes/sum-type)'s fold instead.
+`superouter` deliberately allows you to create route definitions that assume specific path literals without a fallback. This avoids a lot of needless checking in nested routes when it wouldn't make sense for the literal prefix to exist.
 
-`static-sum-type` will throw if you have missed cases or specified too many cases.
+But if you would like to guarantee your code can handle arbitrary paths, simply call `fromPath('/')` immediately after defintion. Then your code will throw if the definition is not total.
 
-`Route.fold` is especially useful to map `Route` to views in your application in a manner similar to `<Switch>` in `react-router`.
+```typescript
+const Example = superouter.type("Example", {
+  A: (_: { a_id: string }) => `/a/:a_id`,
+  B: (_: { b_id: string }) => `/b/:b_id`,
+  C: (_: { c_id?: string }) => [`/c`, "/c/:c_id"],
+});
 
----
-
-#### `Route.matchOr` 
-
-`( (Error[]) => Route, url ) => Route`
-
-`matchOr` accepts a callback to handle url's that can't be matched and a `url` to try to match.
-
-If no match can be found the callback is executed to allow the user to return from unexpected url's.
-
-```js
-const Route = type('Route', {
-    Home: '/',
-    Settings: '/settings/:settings',
-    Album: '/album/:album_id',
-    AlbumPhoto: '/album/:album_id/photo/:file_id',
-    Tag: '/tag/:tag',
-    TagList: '/tag',
-    TagFile: '/tag/:tag/photo/:file_id'
-})
-
-Route.matchOr( 
-    () => Route.of.Home(),
-    '/album/abc123/photo/123'
-)
-//=> Route.of.AlbumPhoto({ album_id: 'abc123', file_id: '123' })
-
-
-Route.matchOr( 
-    () => Route.of.Home(),
-    '/unknown/route'
-)
-//=> Route.of.Home()
+// will throw, doesn't match any case
+Example.fromPath("/");
 ```
 
-`matchOr` also passes in all the errors keyed by the case name of the routes
-to the callback, so you can have custom logic that returns different default branches depending on the matching errors.
+vs
 
-```js
-Route.matchOr(
-    errs => errs.TagFile.find( x => x.case === 'ExcessPattern' )
-        ? Route.of.TagList()
-        : Route.of.Home()
-    , url
-)
+```typescript
+const Example = superouter.type("Example", {
+  A: (_: { a_id: string }) => `/a/:a_id`,
+  B: (_: { b_id: string }) => `/b/:b_id`,
+  C: (_: { c_id?: string }) => [`/c`, "/c/:c_id"],
+  Default: (_: {}) => `/`,
+});
+
+// will not throw, matches 'Default' case
+Example.fromPath("/");
+// => { type: 'Example', tag: 'Default', value: {} }
 ```
-
----
-
-### `Route.matches`
-
-`string => Valid.Y( Route[] ) | Valid.N ( StrMap( CaseName, Error[] ) )`
-
-`Route.matches` is a lower level alternative to `Route.matchOr` which either returns all the valid matching routes (if there are any) or all the errors
-that prevented matches keyed by the name of the route cases.
-
----
-
-### `Route.toURL`
-
-`Route => string`
-
-```js
-const Route = type('Route', {
-    Home: '/',
-    Settings: '/settings/:settings',
-    Album: '/album/:album_id',
-    AlbumPhoto: '/album/:album_id/photo/:file_id',
-    Tag: '/tag/:tag',
-    TagFile: '/tag/:tag/photo/:file_id'
-})
-
-Route.toURL( Route.of.Tag({ tag: 'beach' }) )
-//=> /tag/beach
-```
-
-### Advanced
-
-> 🚨 **Warning** 🚨
->
-> There is absolutely no need to ever use any of the functionality below.  You can very happily and safely only use the above API.  Everything below is the primitives used to create the higher level API.  It's exposed because there's no danger in doing so, and it's documented because it's exposed.
-
----
-
-#### `Valid`
-
-This library uses a sum-type `Valid` to safely model invalid route matches.  The user friendly API traverses this type and throws on errors.  But if one 
-wants to safely analyze all the invalid patterns without using a `try {} catch(e){...}` `Valid` can be extremely useful.
-
-You'll encounter `Valid` if you interact with some more advanced functions exposed by the library including `tokenizePattern`, `tokenizeURL`, `type$safe`, or `Route.matches`.
-
-`Valid` is an example of a static sum type.  It's simply an object with 2 constructors `Y` and `N`.
-
-`Valid.Y(x)` will return an object `{ type: 'Valid', case: 'Y', value: x }`
-
-And `Valid.N(x)` will return an object `{ type: 'Valid', case: 'N', value: x }`.
-
-It's simply a way to annotate that there's some kind of error branching in
-a function without throwing an error.
-
-`Valid` includes some helper functions like `fold`, `bifold` and `map`.
-
----
-
-#### `tokenizePattern`
-
-`string -> Valid.Y( PatternToken[] ) | Valid.N( PatternToken.Error[] )`
-
-Convert a pattern string into an array of tokens or an array of PatternToken errors.
-
-The response is wrapped in a `Valid` to model the branching behaviour.
-
-`PatternToken.Error` is documented further in the Error Types section.
-
----
-
-#### `tokenizeURL`
-
-`(PatternToken[], string) -> Valid.Y( URLToken[] ) | Valid.N( URLToken.Error[] )`
-
-Convert an array of `PatternToken`'s and a `url` into an array of `URLToken`'s.
-
-`URLToken.Error` is documented further in the Error Types section.
-
-The response is wrapped in a `Valid` to model the branching behaviour.
-
----
-
-#### `PatternToken`
-
-A data structure that models the different types of supported patterns used
-by the `superouter.type` constructor.
-
-There are 3 types of patterns: 
-
-```hs
-data PatternToken 
-    = Path string 
-    | Part string 
-    | Variadic string
-```
-
----
-
-#### `URLToken`
-
-A data structure that models the matching of segments of a URL to segments of a `PatternToken`.
-
-There are 5 types of patterns: 
-
-```hs
-data URLToken 
-    = Unmatched { expected::string, actual::string } 
-    | ExcessSegment string 
-    | Path string 
-    | Part { key::string, value::string }
-    | Variadic { key::string, value::string }
-    
-```
-
-Each `URLToken` has a specificity which helps guide higher level functions to choose the most accurate route match.
-
----
-
-#### Error Types
-
-You will encounter different types of errors when using the more advanced aspects of `superouter`.  Below is a brief explanation of each type of error and the circumstance that would trigger them.
-
-
-| Type         | Case          | When 
-|--------------|---------------|------
-| `PatternToken` | `DuplicateDef`  | When two patterns in a route defintion are effectively the same.
-| `PatternToken` | `DuplicatePart` | When two bindings within a pattern have the same name. 
-| `PatternToken` | `VariadicPosition` | When a variadic pattern is not in the final position. 
-| `PatternToken` | `VariadicCount` | When there is more than one variadic in a pattern.
-| `URLToken` | `UnmatchedPaths` | When a path segment was found but it did not match the expected value.
-| `URLToken` | `ExcessSegment` | When a URL had more segments than a pattern had expected and there was no variadic to consume the excess segments.
-| `URLToken` | `ExcessPattern` | When a URL did not have enough segments to satisfy a pattern.

@@ -1,24 +1,27 @@
 {
   "name": "superouter",
-  "version": "0.3.2-next.21",
+  "version": "1.0.1-next.5",
   "description": "",
-  "main": "dist/superouter.umd.min.js",
-  "module": "lib/index.js",
   "type": "module",
-  "unpkg": "dist/superouter.umd.min.js",
+  "main": "./dist/superouter.esm.js",
+  "types": "./dist/index.ts",
+  "module": "./dist/superouter.esm.js",
+  "unpkg": "./dist/superouter.esm.js",
   "scripts": {
-    "build": "rollup -c rollup.config.js",
-    "test": "node test/test.js"
+    "test": "node --import tsx --test test/*.ts",
+    "dev": "node --watch --import tsx --test test/*.ts",
+    "build:bundle": "esbuild lib/index.ts --bundle --format=esm --sourcemap  --allow-overwrite --outfile=./dist/superouter.js",
+    "build:types": "npx tsc",
+    "build:clear": "rm -fr ./dist",
+    "build": "npm run build:clear && npm run build:bundle && npm run build:types",
+    "prepublishOnly": "npm version prerelease --preid=next && npm run build"
+  },
+  "publishConfig": {
+    "tag": "next"
   },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
   "repository": "git@github.com:JAForbes/superouter.git",
-  "devDependencies": {
-    "eslint": "^5.8.0",
-    "rollup": "^0.67.3",
-    "rollup-plugin-terser": "^7.0.2",
-    "tape": "^4.9.1"
-  },
   "files": [
     "dist/*",
     "readme.md",
@@ -36,5 +39,17 @@
     "express",
     "minimatch",
     "path-to-regexp"
-  ]
+  ],
+  "devDependencies": {
+    "typescript": "^5.0.4",
+    "@types/mithril": "^2.0.12",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "tsx": "^4.7.0"
+  },
+  "dependencies": {
+    "@types/node": "^20.11.17"
+  }
 }

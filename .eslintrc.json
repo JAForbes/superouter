@@ -1,86 +1,22 @@
 {
-  "parserOptions": {
-    "ecmaVersion": 2017,
-    "sourceType": "module"
-  },
-  "env": {
-    "node": true,
-    "es6": true
-  },
-  "rules": {
-    "no-var": 1,
-    "no-undef": 2,
-    "no-unused-vars": [
-      "error",
-      {
-        "argsIgnorePattern": "_"
-      }
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "node": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended"
     ],
-    "comma-style": [
-      "warn",
-      "first"
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": [
+        "@typescript-eslint"
     ],
-    "linebreak-style": [
-      "error",
-      "unix"
-    ],
-    "quotes": [
-      "error",
-      "single"
-    ],
-    "operator-linebreak": [
-      "warn",
-      "before",
-      {
-        "overrides": {
-          "=": "after"
-        }
-      }
-    ],
-    "quote-props": [
-      "warn",
-      "as-needed"
-    ],
-    "no-const-assign": [
-      "warn"
-    ],
-    "operator-assignment": [
-      "warn",
-      "never"
-    ],
-    "no-dupe-keys": [
-      "warn"
-    ],
-    "no-cond-assign": [
-      "warn"
-    ],
-    "no-extra-parens": [
-      "warn"
-    ],
-    "no-sparse-arrays": [
-      "warn"
-    ],
-    "array-callback-return": [
-      "error"
-    ],
-    "complexity": [
-      "warn"
-    ],
-    "no-param-reassign": [
-      "warn"
-    ],
-    "callback-return": [
-      "error"
-    ],
-    "max-depth": [
-      "warn",
-      4
-    ],
-    "max-len": [
-      "warn",
-      80,
-      4
-    ],
-    "consistent-return": 2
-  }
+    "rules": {
+        "@typescript-eslint/no-unused-vars": ["error", { "varsIgnorePattern": "_", "argsIgnorePattern": "_" }]
+    }
 }
