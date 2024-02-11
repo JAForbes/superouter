@@ -133,3 +133,12 @@ test("fromPath: complex", () => {
     },
   ]);
 });
+
+test("fromPath: odin", () => {
+
+  const res = safe("/data/schedules", "/data/schedules/:schedule_id")
+
+  assert( res.tag == 'Left')
+  assert.match(res.value.message, /variable ':schedule_id'/)
+  console.log(res)
+})

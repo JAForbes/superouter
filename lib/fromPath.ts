@@ -43,7 +43,7 @@ export function safe(
   let mode: Mode = "initialize";
   let prevMode: Mode = "initialize";
   let score = 0;
-  const maxIterations = path.length + pattern.length + 1;
+  const maxIterations = path.length + pattern.length + 2;
   let iterations = 0;
   // eslint-disable-next-line no-constant-condition
   while (true) {
