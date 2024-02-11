@@ -74,7 +74,7 @@ Hopefully _superouter_ also models route state as a tagged union type. The API o
 
 First we define the supertype. We do so via the `superouter.type` function. The first argument is the name of your route. The name is there so you can have different route types for different parts of your app and each route type is incompatible with the others methods.
 
-The second argument is a record where the key is the name of the route and the value is a function: `<T>(value:T) => [T, string]`.
+The second argument is a record where the key is the name of the route and the value is a function: `<T>(value:T) => string`.
 
 _superouter_ analyzes your definition via `Parameters<Definition>` to infer the structure of each route subtype.
 
