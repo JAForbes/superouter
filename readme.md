@@ -41,27 +41,29 @@ A router that encourages you to use names and types instead of dealing with URL 
 
 ## Why
 
-Route state is the primary state in your application. If we derive state from what the URL is we get deep linkable/sharable apps. We can cold boot our apps from the URL state and not have to click multiple times to get back to what we were doing during development. Relying on a URL state as the foundation of your app state leads to a better experience for users and developers and it forces us to think about what is the total possibility space for a particular screen ahead of time.
+Route state is the primary state in your application. If we derive state from the URL we automatically get deep linkable/sharable apps. We can cold boot our apps from the URL state and not have to click multiple times to get back to what we were doing during development. Relying on a URL state as the foundation of your app state leads to a better experience for users and developers and it forces us to think about what is the total possibility space for a particular screen ahead of time.
+
+Advancements in hot module reloading has potentially misguided us into focusing too much on DX and not UX.  If we refresh the app constantly we are forced to experience load times, and route navigations repeatedly - just like a user.  So let's fix the actual problem by embedding more state in the URL instead of hiding it behind fancy tools.
 
 If we are going to rely on route state so much, then we should probably not do stringly checks against URL pathnames. We should instead match on data.
 
-So superouter aims to give you a data-centric experience for dealing with route state. Superouter instances are just data, they have no instance methods, you can store them in localStorage, in your state management library, in your database etc - this is by design.
+*superouter* gives you a data-centric experience for dealing with route state. *uperouter* instances are just data, they have no instance methods, you can store them in localStorage, in your state management library, in your database etc - this is by design.
 
-Superouter is deliberately small and simple. You are encouraged to build specific niceties on top of superouter for your framework of choice.
+*superouter* is deliberately small and simple. You are encouraged to build specific niceties on top of *superouter* for your framework of choice.
 
-Superouter also encourages you to think of your route state as a union type. And so the API offers affordances to match on route state and handle each case specifically with the data that is expected for that given state. This is more reliable than adhoc ternaries and if statements that match on specific URL paths and aren't updated as your route definitions organically evolve.
+*superouter* also encourages you to think of your route state as a tagged union type. And so the API offers affordances to match on route state and handle each case specifically with the data that is expected for that given state. This is more reliable than adhoc ternaries / if statements that match on specific URL paths and aren't updated as your route definitions organically evolve.
 
 ## API
 
 ### Creating a route type:
 
-First we define the type. We do via the `superouter.type` function. The first argument is the name of your route. The name is there so you can have different route types for different parts of your app and each route type is incompatible with the others methods.
+First we define the supertype. We do so via the `superouter.type` function. The first argument is the name of your route. The name is there so you can have different route types for different parts of your app and each route type is incompatible with the others methods.
 
-The second argument isa record where the key is the name of the route and the value is a function: `<T>(value:T) => [T, string]`.
+The second argument is a record where the key is the name of the route and the value is a function: `<T>(value:T) => [T, string]`.
 
-The function takes the arguments you expect to parse from your URL pattern, and returns those arguments as the first item of a pair. The second item of the pair is the URL pattern that will be used to parse the URL string.
+*superouter* analyzes your definition via `Parameters<Definition>` to infer the structure of each route subtype.
 
-This seems weird, but just roll with it because it provides Typescript enough information for us to generate some powerful type checks.
+The function takes the arguments you expect to parse from your URL pattern and returns the pattern that will be used to parse the URL string.
 
 ```js
 const route = superouter.type("Example", {
@@ -73,7 +75,7 @@ const route = superouter.type("Example", {
 
 In the above example, typescript now knows `route.Group` can only be constructed with both an `organization_id` and a `group_id` whereas `Route.Home` only needs an `organization_id`. We also generate helper methods, and typescript knows this dynamic methods exist e.g. `isGroup` or `isHome`.
 
-Because we can rely on these type checks, in `superouter@v1` there are no runtime checks (unlike prior versions). This leads to far better performance. The only exception to this is when parsing a URL, we return useful information on why a URL wasn't a match when using the safe variant.
+> 🤓 We call `Example` our supertype, and `Example.Group` and `Example.Home` our subtypes.
 
 ### `is[Tag]`
 
