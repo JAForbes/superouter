@@ -15,6 +15,9 @@
     "build": "npm run build:clear && npm run build:bundle && npm run build:types",
     "prepublishOnly": "npm version prerelease --preid=next && npm run build"
   },
+  "publishConfig": {
+    "tag": "next"
+  },
   "author": "james.a.forbes@gmail.com <=> (http://james-forbes.com)",
   "license": "MIT",
   "repository": "git@github.com:JAForbes/superouter.git",
