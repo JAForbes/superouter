@@ -35,6 +35,9 @@ export type API<N extends string, D extends Definition> = {
     instance: InternalInstance<N, D, keyof D>,
     options: MatchOptions<D, T>
   ) => T;
+  def: <T>(
+		fn: (x: InternalInstance<N, D, keyof D>) => T,
+	) => (x: InternalInstance<N, D, keyof D>) => T
 };
 
 export type Is<R extends string> = `is${R}`;
@@ -87,6 +90,10 @@ export type RouteGet<N extends string, D extends Definition> = {
 
 function match(instance: any, options: any): any {
   return options[instance.tag](instance.value);
+}
+
+function def(fn: any): any {
+	return (x: any) => fn(x)
 }
 
 function otherwise(tags:string[]) {
@@ -233,6 +240,7 @@ export function type<N extends string, D extends Definition>(
     fromPathSafe,
     matchOr,
     match,
+    def,
     otherwise: (...args: any[]) => {
       if (args.length === 0) {
         return otherwise(Object.keys(routes))
