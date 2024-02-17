@@ -110,17 +110,32 @@ test("index:  match", () => {
   assert.equal(f(Example.C({ c_id: "100" })), 100);
   assert.equal(f(Example.C({})), 0);
 
-  const _ = Example.otherwise(["B", "C"]);
-
-  const g = (r: superouter.Instance<typeof Example>) =>
-    Example.match(r, {
-      A: () => 1,
-      ..._(() => -1),
-    });
-
-  assert.equal(g(Example.A({ a_id: "cool" })), 1);
-  assert.equal(g(Example.B({ b_id: "cool" })), -1);
-  assert.equal(g(Example.C({ c_id: "cool" })), -1);
+  {
+    const _ = Example.otherwise(["B", "C"]);
+  
+    const g = (r: superouter.Instance<typeof Example>) =>
+      Example.match(r, {
+        A: () => 1,
+        ..._(() => -1),
+      });
+  
+    assert.equal(g(Example.A({ a_id: "cool" })), 1);
+    assert.equal(g(Example.B({ b_id: "cool" })), -1);
+    assert.equal(g(Example.C({ c_id: "cool" })), -1);
+  }
+  {
+    const _ = Example.otherwise();
+    
+    const g = (r: superouter.Instance<typeof Example>) =>
+      Example.match(r, {
+        ..._(() => -1),
+        A: () => 1,
+      });
+  
+    assert.equal(g(Example.A({ a_id: "cool" })), 1);
+    assert.equal(g(Example.B({ b_id: "cool" })), -1);
+    assert.equal(g(Example.C({ c_id: "cool" })), -1);
+  }
 });
 
 test("index:  silly", () => {

@@ -47,6 +47,12 @@ type Otherwise<D extends Definition> = {
     }
 }
 
+type OtherwiseEmpty<D extends Definition> = {
+  otherwise: <T>() => (fn: () => T) => {
+      [k in keyof D]: () => T
+  }
+}
+
 type InternalInstance<
   N extends string,
   D extends Definition,
@@ -62,7 +68,8 @@ export type Superoute<N extends string, D extends Definition> = Constructors<
   API<N, D> &
   RouteIs<N, D> &
   RouteGet<N, D> & 
-  Otherwise<D>;
+  Otherwise<D> &
+  OtherwiseEmpty<D>;
 
 export type RouteIs<N extends string, D extends Definition> = {
   [Key in keyof D as Is<Key extends string ? Key : never>]: (
@@ -226,7 +233,12 @@ export function type<N extends string, D extends Definition>(
     fromPathSafe,
     matchOr,
     match,
-    otherwise
+    otherwise: (...args: any[]) => {
+      if (args.length === 0) {
+        return otherwise(Object.keys(routes))
+      }
+      return otherwise(args[0])
+    }
   };
 
   for (const [tag, of] of Object.entries(routes)) {
