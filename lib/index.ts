@@ -45,13 +45,13 @@ export type Is<R extends string> = `is${R}`;
 export type Get<R extends string> = `get${R}`;
 
 type Otherwise<D extends Definition> = {
-    otherwise: <T, R extends Partial<keyof D>>(tags: R[]) => (fn: () => T) => {
+    otherwise: <R extends Partial<keyof D>>(tags: R[]) => <T>(fn: () => T) => {
         [k in R]: () => T
     }
 }
 
 type OtherwiseEmpty<D extends Definition> = {
-  otherwise: <T>() => (fn: () => T) => {
+  otherwise: () => <T>(fn: () => T) => {
       [k in keyof D]: () => T
   }
 }
@@ -62,7 +62,7 @@ type InternalInstance<
   K extends keyof D
 > = ReturnType<Constructors<N, D>[K]>;
 
-export type Instance<A extends API<any, any> > = InternalInstance<A["type"], A["definition"], keyof A["definition"]>
+export type Instance<A extends API<any, any>> = InternalInstance<A["type"], A["definition"], keyof A["definition"]>
 
 export type Superoute<N extends string, D extends Definition> = Constructors<
   N,
