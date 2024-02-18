@@ -289,3 +289,5 @@ export type Tag<A> =
     : A extends Instance<any>
     ? A["tag"]
     : never
+
+  export { normalizePathSegment, normalizeRest }
