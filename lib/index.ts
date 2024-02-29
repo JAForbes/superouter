@@ -251,8 +251,7 @@ export function type<N extends string, D extends Definition>(
 
   for (const [tag, of] of Object.entries(routes)) {
     api[tag] = (value:any = {}) => {
-        value.rest = normalizeRest(value.rest)
-        return { type, tag, value }
+        return { type, tag, value: { ...value, rest: normalizeRest(value.rest) } }
     };
 
     const res = of({});
