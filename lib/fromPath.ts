@@ -10,16 +10,16 @@ type Mode =
 | "collectRest";
 
 
+export type ParseResult = 
+  Either<Error, { value: Record<string, string>; rest: string; score: number }>
+
 // todo-james this is already single pass / O(n)
 // but we could probably scan both the pattern and path
 // mutually which could be faster, worth a try?
 export function safe(
   _path: string,
   _pattern: string
-): Either<
-  Error,
-  { value: Record<string, string>; rest: string; score: number }
-> {
+): ParseResult {
 
   if (_path == null ) {
     throw new Error('Provided path was null but must be a URL path')
