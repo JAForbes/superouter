@@ -3,10 +3,6 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import * as superouter from "../lib/index.js";
 
-const defaultContext = {
-  rest: "",
-};
-
 describe("index", () => {
   it("basic", () => {
     const Example = superouter.create("Example", {
@@ -18,13 +14,25 @@ describe("index", () => {
       type: "Example",
       tag: "A",
       value: { a_id: "hello" },
-      context: defaultContext,
+      context: {
+        parentPatterns: [],
+        patterns: [
+          '/a/:a_id'
+        ],
+        rest: ''
+      },
     });
     assert.deepEqual(Example.B({ b_id: "hello" }), {
       type: "Example",
       tag: "B",
       value: { b_id: "hello" },
-      context: defaultContext,
+      context: {
+        parentPatterns: [],
+        patterns: [
+          '/b/:b_id'
+        ],
+        rest: ''
+      },
     });
 
     assert.equal(Example.definition.A({ a_id: "" }), "/a/:a_id");
@@ -110,7 +118,13 @@ describe("index", () => {
       type: "Main",
       tag: "A",
       value: { a_id: "wow" },
-      context: defaultContext,
+      context: {
+        parentPatterns: [],
+        patterns: [
+          '/a/:a_id'
+        ],
+        rest: ''
+      },
     });
   });
 

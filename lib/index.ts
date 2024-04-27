@@ -55,6 +55,8 @@ export type MatchOptions<D extends Definition, T, PV> = {
 // add more metadata in the future.
 export type RouteContext = {
   rest: string;
+  patterns: string[]
+  parentPatterns: string[]
 };
 
 export type API<N extends string, D extends Definition, PV> = {
@@ -181,7 +183,7 @@ function otherwise(tags: string[]) {
 function toPathInternalSafe(
   route: any,
   parentPatterns: string[],
-  localPatterns: Record<string, string[]>
+  localPatterns: string[]
 ): Either<Error, string> {
   const errors = [];
   const paths = [];
@@ -213,7 +215,7 @@ function toPathInternalSafe(
     }
   }
 
-  for (const _pattern of localPatterns[route.tag]) {
+  for (const _pattern of localPatterns) {
     const pattern = normalizePathSegment(_pattern);
     let path: string[] | null = [];
     let rank = 0;
@@ -260,6 +262,34 @@ function toPathInternalSafe(
   }
 }
 
+
+function toPath(route: any) {
+  const result = toPathSafe(route);
+  if (result.tag === "Left") {
+    throw result.value;
+  } else {
+    return result.value;
+  }
+}
+
+function toLocalPath(route: any) {
+  const result = toPathInternalSafe(route, [], route.context.patterns);
+  if (result.tag === "Left") {
+    throw result.value;
+  } else {
+    return result.value;
+  }
+}
+
+function toPathSafe(route: any): Either<Error, string> {
+  const answer = toPathInternalSafe(route, route.context.parentPatterns, route.context.patterns);
+  if (answer.tag === "Right") {
+    return Either.Right(normalizePathSegment(answer.value));
+  }
+  return answer;
+}
+
+
 function internalCreate<
   N extends string,
   D extends Definition,
@@ -270,32 +300,7 @@ function internalCreate<
   routeContext: C,
   parentPatterns: string[]
 ): Superoute<N, D, null> {
-  function toPathSafe(route: any): Either<Error, string> {
-    const answer = toPathInternalSafe(route, parentPatterns, api.patterns);
-    if (answer.tag === "Right") {
-      return Either.Right(normalizePathSegment(answer.value));
-    }
-    return answer;
-  }
-
-  function toPath(route: any) {
-    const result = toPathSafe(route);
-    if (result.tag === "Left") {
-      throw result.value;
-    } else {
-      return result.value;
-    }
-  }
-
-  function toLocalPath(route: any) {
-    const result = toPathInternalSafe(route, [], api.patterns);
-    if (result.tag === "Left") {
-      throw result.value;
-    } else {
-      return result.value;
-    }
-  }
-
+  
   function fromLocalPathOr(
     otherwise: () => any,
     path: string,
@@ -472,6 +477,8 @@ function internalCreate<
       const context: RouteContext = {
         // prefix: normalizePathSegment(routeContext.prefix),
         rest: normalizeRest(config?.rest ?? ""),
+        parentPatterns,
+        patterns: api.patterns[tag],
       };
 
       return { type, tag, value: { ...value }, context };

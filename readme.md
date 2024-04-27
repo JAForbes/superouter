@@ -352,6 +352,14 @@ Returns the definition object you passed in when initialized the type. This is u
 
 Any excess unmatched URL fragments will appear on the parsed `instance.context.rest` property.
 
+### `instance.context.patterns`
+
+The local url patterns for that specific tag
+
+### `instance.context.localPatterns`
+
+The parent url patterns.
+
 ## Nested routes
 
 *superouter* has first class for nested routes.

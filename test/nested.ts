@@ -28,14 +28,28 @@ describe("nested", () => {
       type: "Main",
       tag: "LoggedIn",
       value: { organization_id: "cool" },
-      context: { rest: "" },
+      context: {
+        parentPatterns: [],
+        patterns: [
+          '/:organization_id'
+        ],
+        rest: ''
+      }
     });
     
     assert.deepEqual(b, {
       type: "Main.LoggedIn",
       tag: "Admin",
       value: { organization_id: "cool" },
-      context: { rest: "" },
+      context: {
+        parentPatterns: [
+          '/:organization_id'
+        ],
+        patterns: [
+          '/admin'
+        ],
+        rest: ''
+      },
     });
   
     
@@ -43,7 +57,15 @@ describe("nested", () => {
       type: "Main.LoggedIn.Admin",
       tag: "Roles",
       value: { organization_id: "nice", role_id: "basic" },
-      context: { rest: "" },
+      context: {
+        parentPatterns: [
+          '/:organization_id/admin'
+        ],
+        patterns: [
+          '/roles/:role_id'
+        ],
+        rest: ''
+      },
     });
 
   })
@@ -65,19 +87,41 @@ describe("nested", () => {
       type: "Main",
       tag: "LoggedIn",
       value: { organization_id: "cool" },
-      context: { rest: "admin/roles/basic" },
+      context: {
+        parentPatterns: [],
+        patterns: [
+          '/:organization_id'
+        ],
+        rest: 'admin/roles/basic'
+      },
     });
     assert.deepEqual(B.fromPath("/cool/admin/roles/basic"), {
       type: "Main.LoggedIn",
       tag: "Admin",
       value: { organization_id: "cool" },
-      context: { rest: "roles/basic" },
+      context: {
+        parentPatterns: [
+          '/:organization_id'
+        ],
+        patterns: [
+          '/admin'
+        ],
+        rest: 'roles/basic'
+      },
     });
     assert.deepEqual(C.fromPath("/cool/admin/roles/basic"), {
       type: "Main.LoggedIn.Admin",
       tag: "Roles",
       value: { role_id: "basic", organization_id: "cool" },
-      context: { rest: "" },
+      context: {
+        parentPatterns: [
+          '/:organization_id/admin'
+        ],
+        patterns: [
+          '/roles/:role_id'
+        ],
+        rest: ''
+      },
     });
 
     assert.deepEqual(
@@ -86,7 +130,15 @@ describe("nested", () => {
         type: "Main.LoggedIn.Admin",
         tag: "Roles",
         value: { organization_id: "nice", role_id: "wizard" },
-        context: { rest: "" },
+        context: {
+          parentPatterns: [
+            '/:organization_id/admin'
+          ],
+          patterns: [
+            '/roles/:role_id'
+          ],
+          rest: ''
+        },
       }
     );
 
