@@ -530,9 +530,9 @@ export function create<D extends Definition, N extends string>(
   ...args: any[]
 ): Superoute<N, D, null> {
   if (typeof args[0] === "string") {
-    return internalCreate(args[0] as N, args[1] as D, { rest: "" }, []);
+    return internalCreate(args[0] as N, args[1] as D, { rest: "", patterns: [], parentPatterns: [] }, []);
   } else {
-    return internalCreate("Main" as N, args[0] as D, { rest: "" }, []);
+    return internalCreate("Main" as N, args[0] as D, { rest: "", patterns: [], parentPatterns: [] }, []);
   }
 }
 
