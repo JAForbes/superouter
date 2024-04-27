@@ -1,4 +1,5 @@
 import { Either } from "./either.js";
+import { normalizeRest } from "./normalize.js";
 
 type Mode =
 | "initialize"
@@ -9,16 +10,16 @@ type Mode =
 | "collectRest";
 
 
+export type ParseResult = 
+  Either<Error, { value: Record<string, string>; rest: string; score: number }>
+
 // todo-james this is already single pass / O(n)
 // but we could probably scan both the pattern and path
 // mutually which could be faster, worth a try?
 export function safe(
   _path: string,
   _pattern: string
-): Either<
-  Error,
-  { value: Record<string, string>; rest: string; score: number }
-> {
+): ParseResult {
 
   if (_path == null ) {
     throw new Error('Provided path was null but must be a URL path')
@@ -43,17 +44,10 @@ export function safe(
   let mode: Mode = "initialize";
   let prevMode: Mode = "initialize";
   let score = 0;
-  const maxIterations = path.length + pattern.length + 1;
+  const maxIterations = path.length + pattern.length;
   let iterations = 0;
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    if (iterations >= maxIterations) {
-      throw new Error(
-        `Unexpected recursive logic while parsing path '${_path}' using pattern '${_pattern}'`
-      );
-    }
-    iterations++;
-
     if (mode == "initialize") {
       while (pattern[patternI] === "/") {
         patternI++;
@@ -129,6 +123,13 @@ export function safe(
       }
     }
 
+    if (iterations >= maxIterations) {
+      throw new Error(
+        `Unexpected recursive logic while parsing path '${_path}' using pattern '${_pattern}'`
+      );
+    }
+    iterations++;
+
     if (
       (mode == "collectLiteralName" || mode == "collectVarName") &&
       pattern[patternI] === "/"
@@ -200,7 +201,7 @@ export function safe(
   if (rest) {
     score = Math.max(0, score - 1);
   }
-  return { type: "Either", tag: "Right", value: { rest, value, score } };
+  return { type: "Either", tag: "Right", value: { rest: normalizeRest(rest), value, score } };
 }
 
 export function unsafe(  _path: string, _pattern: string): { rest: string, value: Record<string,string>, score: number } {
