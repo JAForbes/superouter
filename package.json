@@ -1,6 +1,6 @@
 {
   "name": "superouter",
-  "version": "1.0.1-next.23",
+  "version": "1.0.1-next.24",
   "description": "",
   "type": "module",
   "main": "./dist/superouter.esm.js",
