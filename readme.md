@@ -641,3 +641,26 @@ superouter.create({
   A: (_: { a_id: string }) => `/:a_id`,
 });
 ```
+
+## Usage from JS
+
+In JS we can't (officially) annotate our types, but type inference will still kick in if use default values:
+
+
+```js
+const route = superouter.create({
+
+  Home: (_={ 
+    organization_id:''
+  }) => `/:organization_id`,
+
+  Group: (_={ 
+    organization_id: ''; 
+    group_id: ''
+  }) => `/:organization_id/groups/:group_id`,
+
+});
+
+```
+
+In an editor like VS Code, you won't get type errors, but you will get type completion when creating routes and dealing with route instances.
