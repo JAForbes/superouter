@@ -180,6 +180,37 @@ function otherwise(tags: string[]) {
   return (fn: any) => Object.fromEntries(tags.map((tag) => [tag, fn]));
 }
 
+type AnyRoute = { type: string, tag: string, value: Record<string, any>, context: RouteContext }
+
+function toPathSafeExternal(route: AnyRoute): Either<Error, string>{
+  return toPathInternalSafe(route, route.context.parentPatterns, route.context.patterns)
+}
+
+export { toPathSafeExternal as toPathSafe }
+
+function toPathOrExternal(otherwise: string, route: AnyRoute): string {
+  const answer = toPathInternalSafe(route, route.context.parentPatterns, route.context.patterns)
+  if (answer.tag === 'Left') {
+    return otherwise
+  } else {
+    return answer.value
+  }
+}
+
+export { toPathOrExternal as toPathOr }
+
+function toPathExternal(route: AnyRoute): string {
+  const answer = toPathInternalSafe(route, route.context.parentPatterns, route.context.patterns)
+  if (answer.tag === 'Left') {
+    throw answer.value
+  } else {
+    return answer.value
+  }
+}
+
+export { toPathExternal as toPath }
+
+
 function toPathInternalSafe(
   route: any,
   parentPatterns: string[],
