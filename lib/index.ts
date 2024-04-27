@@ -180,7 +180,7 @@ function otherwise(tags: string[]) {
   return (fn: any) => Object.fromEntries(tags.map((tag) => [tag, fn]));
 }
 
-type AnyRoute = { type: string, tag: string, value: Record<string, any>, context: RouteContext }
+export type AnyRoute = { type: string, tag: string, value: Record<string, any>, context: RouteContext }
 
 function toPathSafeExternal(route: AnyRoute): Either<Error, string>{
   return toPathInternalSafe(route, route.context.parentPatterns, route.context.patterns)
