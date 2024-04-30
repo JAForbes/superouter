@@ -373,12 +373,12 @@ const Root = superouter.create({
       "/:organization_id",
 });
 
-const LoggedIn = A.LoggedIn.create({
+const LoggedIn = Root.LoggedIn.create({
   Admin: "/admin",
   Projects: "/projects",
 });
 
-const Admin = B.Admin.create({
+const Admin = LoggedIn.Admin.create({
   Organizations: "/organizations",
   Roles: (_: { role_id: string }) => "/roles/:role_id",
   Groups: (_: { group_id: string }) => "/groups/:group_id",
