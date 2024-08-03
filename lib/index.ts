@@ -388,7 +388,7 @@ function internalCreate<
     let bestRank = 0;
     let bestParentMatch = {
       value: {},
-      rest: "",
+      rest: path,
       score: -1,
     };
     let lastParsedParentPath: ParsePath.ParseResult;
@@ -403,6 +403,7 @@ function internalCreate<
 
       if (parsedPrefix.value.score > bestRank) {
         bestParentMatch = parsedPrefix.value;
+        bestRank = parsedPrefix.value.score
       }
     }
 
@@ -412,10 +413,8 @@ function internalCreate<
 
     const { value: parentValue = {}, rest } = bestParentMatch;
 
-    if (rest !== "") {
-      path = rest;
-      bestRank = 0;
-    }
+    path = rest;
+    bestRank = 0;
 
     let bestRoute: any = null;
     let error: any = null;

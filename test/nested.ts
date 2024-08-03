@@ -143,4 +143,36 @@ describe("nested", () => {
     );
 
   })
+
+  it('from super-mithril-examples', () => {
+    const Route = superouter.create({
+      Redirect: `/`,
+      Example: `/examples`,
+    })
+    const ExampleRoute = Route.Example.create({
+      SevenGuis: '/seven-guis',
+      StopWatch: '/stopwatch',
+      TapeDeck: '/tapedeck',
+      TicTacToe: '/tic-tac-toe',
+    })
+    const SevenGuisRoute = ExampleRoute.SevenGuis.create({
+      Redirect: '/',
+      Counter: '/counter',
+      TemperatureContrived: '/temperature/contrived',
+      TemperatureSimple: '/temperature/simple',
+      FlightBooker: '/flight',
+      Timer: '/timer',
+      CRUD: '/crud',
+      CircleDrawer: '/circles',
+      Cells: '/cells'
+    })
+    const CrudRoute = SevenGuisRoute.CRUD.create({
+      NoSelection: '/',
+      Create: '/create',
+      Update: (_: { id: string }) => '/update/:id',
+    })
+
+    const actual = CrudRoute.fromPath('/examples/seven-guis/crud').context.rest
+    assert.equal(actual, '')
+  })
 });
